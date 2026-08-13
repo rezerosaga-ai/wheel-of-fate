@@ -1,12 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "ai.rezerosaga.wheeloffate",
-      "sha256_cert_fingerprints": [
-        "PLACEHOLDER_SHA256_REPLACE_AFTER_KEYSTORE_GENERATION"
-      ]
-    }
-  }
-]
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.wheel_of_fate_three.twa",
+        "sha256_cert_fingerprints": ["5E:F4:B5:82:4F:AB:29:24:8C:86:48:B9:50:C0:D7:CF:3B:29:0F:FF:9F:1D:94:48:5A:1D:0B:73:DB:B0:BC:A4"]
+      }
+    }]

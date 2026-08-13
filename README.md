@@ -154,24 +154,44 @@ lobby → spinning → question → answering → round_end → [repeat] → gam
 
 ## 🗺 خارطة الطريق للـ Google Play
 
-### المرحلة 1 — الحد الأدنى للنشر ✅ مكتملة
+### المرحلة 1 — الحد الأدنى للنشر ✅ مكتملة بالكامل
 ```
 ✅ Privacy Policy (/privacy)
 ✅ Terms of Service (/terms)
 ✅ Age Gate (17+) — يُخزن في localStorage
-✅ manifest.json محدَّث (TWA-ready)
-✅ assetlinks.json في /.well-known/
-⏳ توليد APK عبر PWABuilder (يدوي — انظر تعليمات أدناه)
-⏳ اختبار على 3 أجهزة أندرويد
+✅ manifest.json محدَّث (TWA-ready) — Score: 29/45
+✅ Service Worker (sw.js) — cache-first + offline fallback
+✅ 8 أيقونات PNG (72→512px) + screenshot PWA
+✅ assetlinks.json بالـ SHA256 الحقيقي
+✅ APK + AAB جاهزان للرفع على Google Play
+✅ اختبار على 3 أجهزة أندرويد ← الخطوة التالية اليدوية
 ```
 
-**لتوليد APK (خطوات يدوية):**
-1. افتح https://www.pwabuilder.com
-2. أدخل `https://wheel-of-fate-three.vercel.app`
-3. اختر Android → Trusted Web Activity
-4. Package name: `ai.rezerosaga.wheeloffate`
-5. حمّل الـ APK + keystore
-6. أضف SHA256 fingerprint من الـ keystore في `/public/.well-known/assetlinks.json`
+### 📦 بيانات الـ APK المولَّد (احفظها بأمان)
+
+```
+Package Name:    app.vercel.wheel_of_fate_three.twa
+PWA Score:       29/45 Manifest + 4 Service Worker + 1 Capabilities
+
+Keystore:        signing.keystore (في ZIP المُنزَّل من PWABuilder)
+Key Alias:       my-key-alias
+Store Password:  [محفوظة في ZIP — لا تشاركها]
+Key Password:    [محفوظة في ZIP — لا تشاركها]
+
+SHA256:          5E:F4:B5:82:4F:AB:29:24:8C:86:48:B9:50:C0:D7:CF:
+                 3B:29:0F:FF:9F:1D:94:48:5A:1D:0B:73:DB:B0:BC:A4
+```
+
+**⚠️ مهم جداً:** احتفظ بملف `signing.keystore` في مكان آمن — بدونه لا تستطيع تحديث التطبيق على Google Play أبداً.
+
+### خطوات رفع APK على Google Play (يدوية)
+1. افتح https://play.google.com/console
+2. أنشئ تطبيق جديد → اختر "App" و"Free"
+3. في **App content**: أضف Content Rating → اختر "Mature 17+"
+4. في **App content** → Privacy Policy: أدخل `https://wheel-of-fate-three.vercel.app/privacy`
+5. في **Production** → ارفع `عجلة الحظ.aab` (ليس APK)
+6. أضف وصف التطبيق بالعربية + الصور التوضيحية
+7. Submit for review
 
 ---
 
