@@ -382,6 +382,16 @@ export default function HomeScreen() {
         }}>
           عبدو × أنفال ❤️
         </div>
+
+        {/* Privacy + Terms links */}
+        <div style={{
+          marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center',
+          fontSize: 11, color: 'rgba(100,60,80,0.55)',
+        }}>
+          <a href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>سياسة الخصوصية</a>
+          <span>·</span>
+          <a href="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>شروط الاستخدام</a>
+        </div>
       </div>
     </div>
   );
