@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { rooms, gameState } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { processAction, type GameAction, type GameStateData } from '@/lib/game-logic';
+import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
 
 export async function POST(
   req: NextRequest,
@@ -55,6 +56,9 @@ export async function POST(
       .from(gameState)
       .where(eq(gameState.roomCode, code))
       .limit(1);
+
+    // Notify all SSE subscribers in this room
+    notifyRoomUpdate(code);
 
     return NextResponse.json({
       success: true,

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useGameStore } from '@/store/useGameStore';
 import { useRouter } from 'next/navigation';
-import { recordSession, getPlayerStats, ACHIEVEMENT_META } from '@/lib/player-stats';
+import { recordSessionDB, getPlayerStats, ACHIEVEMENT_META } from '@/lib/player-stats';
 import type { PlayerStats } from '@/lib/player-stats';
 
 interface SessionEndProps {
@@ -125,11 +125,17 @@ export default function SessionEnd({
     setSessionMood(mood);
 
     const before = getPlayerStats();
-    const after = recordSession(loveCounter);
-    setStatsAfter(after);
-
-    const earned = after.achievements.filter((a) => !before.achievements.includes(a));
-    setNewAchievements(earned);
+    // استخدم DB أولاً ثم الـ cache المحلي
+    const playerId = typeof window !== 'undefined'
+      ? (localStorage.getItem('wof_player_id') ?? '')
+      : '';
+    recordSessionDB(playerId, loveCounter).then(({ stats, newAchievements: earned }) => {
+      setStatsAfter(stats);
+      const allEarned = earned.length > 0
+        ? earned
+        : stats.achievements.filter((a) => !before.achievements.includes(a));
+      setNewAchievements(allEarned);
+    });
 
     const text = buildShareText(player1Name, player2Name, player1Score, player2Score, loveCounter, roundNumber, mood);
     setShareText(text);

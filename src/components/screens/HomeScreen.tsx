@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 import { api, getOrCreatePlayerId } from '@/lib/api';
 import { useGameStore } from '@/store/useGameStore';
 import {
-  getPlayerStats, recordSession, ACHIEVEMENT_META,
+  getPlayerStats, loadStatsFromDB, ACHIEVEMENT_META,
   type PlayerStats,
 } from '@/lib/player-stats';
 
@@ -69,6 +70,7 @@ function StreakChip({ stats }: { stats: PlayerStats }) {
 /* ─── Main Home Screen ────────────────────────────────────────────────────── */
 export default function HomeScreen() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { setPlayer, setRoom, player } = useGameStore();
 
   const [screen, setScreen] = useState<'home' | 'create' | 'join'>('home');
@@ -81,7 +83,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (player?.name) setPlayerName(player.name);
-    setStats(getPlayerStats());
+    // تحميل الإحصاءات من DB (مع fallback محلي)
+    const playerId = getOrCreatePlayerId();
+    if (playerId) {
+      loadStatsFromDB(playerId).then(setStats);
+    } else {
+      setStats(getPlayerStats());
+    }
   }, [player]);
 
   const handleCreate = async () => {
@@ -383,9 +391,39 @@ export default function HomeScreen() {
           عبدو × أنفال ❤️
         </div>
 
+        {/* Google Auth button */}
+        {!session ? (
+          <button
+            onClick={() => void signIn('google')}
+            style={{
+              marginTop: 14,
+              background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)',
+              border: '1.5px solid rgba(232,143,160,0.35)',
+              borderRadius: 999, padding: '8px 20px',
+              fontSize: 13, fontWeight: 700, color: 'var(--wof-text)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              transition: 'all 180ms',
+            }}
+          >
+            🔗 اربط بـ Google لحفظ تقدمك
+          </button>
+        ) : (
+          <div style={{
+            marginTop: 14,
+            background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)',
+            border: '1.5px solid rgba(120,200,150,0.4)',
+            borderRadius: 999, padding: '7px 18px',
+            fontSize: 12, fontWeight: 700, color: '#3a8a5a',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            ✅ {session.user?.name ?? 'مسجّل'}
+          </div>
+        )}
+
         {/* Privacy + Terms links */}
         <div style={{
-          marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center',
+          marginTop: 10, display: 'flex', gap: 16, justifyContent: 'center',
           fontSize: 11, color: 'rgba(100,60,80,0.55)',
         }}>
           <a href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>سياسة الخصوصية</a>

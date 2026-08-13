@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '@/store/useGameStore';
-import { useRoomPolling } from '@/hooks/useRoomPolling';
+import { useRoomSSE } from '@/hooks/useRoomSSE';
 import { api } from '@/lib/api';
 import { getQuestionById } from '@/lib/questions';
 import { SFX, BGM, unlockAudio } from '@/lib/sounds';
@@ -137,7 +137,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     setGameState,
   } = useGameStore();
 
-  const { poll } = useRoomPolling(roomCode, 1000);
+  const { poll } = useRoomSSE(roomCode);
 
   const [spinning, setSpinning] = useState(false);
   const [spinTarget, setSpinTarget] = useState<string | null>(null);

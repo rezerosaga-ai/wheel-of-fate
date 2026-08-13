@@ -8,6 +8,33 @@ import {
   serial,
 } from 'drizzle-orm/pg-core';
 
+// ─── Users (Google Auth) ───────────────────────────────────────────────────────
+export const users = pgTable('wof_users', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
+  googleId: text('google_id').unique(),
+  avatarUrl: text('avatar_url'),
+  // الـ playerId المحلي (من localStorage) مربوط بهذا الحساب
+  wofPlayerId: text('wof_player_id').unique(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ─── Player Stats (Streak + Achievements — مخزّنة في DB بدل localStorage) ──
+export const playerStats = pgTable('wof_player_stats', {
+  id: serial('id').primaryKey(),
+  playerId: text('player_id').notNull().unique(), // browser uuid أو userId
+  totalSessions: integer('total_sessions').notNull().default(0),
+  currentStreak: integer('current_streak').notNull().default(0),
+  longestStreak: integer('longest_streak').notNull().default(0),
+  lastPlayedDate: text('last_played_date').notNull().default(''),
+  totalLovePoints: integer('total_love_points').notNull().default(0),
+  achievements: jsonb('achievements').$type<string[]>().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ─── Rooms ────────────────────────────────────────────────────────────────────
 export const rooms = pgTable('wof_rooms', {
   id: serial('id').primaryKey(),

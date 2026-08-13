@@ -1,5 +1,6 @@
 /**
- * Player stats & achievements — shared between HomeScreen and SessionEnd.
+ * Player stats & achievements
+ * المرحلة 2: يخزّن في DB أولاً، ويستخدم localStorage كـ cache + fallback
  */
 
 export interface PlayerStats {
@@ -22,6 +23,7 @@ function defaultStats(): PlayerStats {
   };
 }
 
+// ─── Local cache helpers ─────────────────────────────────────────────────────
 export function getPlayerStats(): PlayerStats {
   if (typeof window === 'undefined') return defaultStats();
   try {
@@ -32,6 +34,51 @@ export function getPlayerStats(): PlayerStats {
   }
 }
 
+function saveLocalStats(stats: PlayerStats) {
+  try {
+    localStorage.setItem('wof-stats', JSON.stringify(stats));
+  } catch { /* storage quota */ }
+}
+
+// ─── DB sync — call after each session ──────────────────────────────────────
+export async function recordSessionDB(playerId: string, lovePoints: number): Promise<{
+  stats: PlayerStats;
+  newAchievements: string[];
+}> {
+  try {
+    const res = await fetch('/api/user/stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId, lovePoints }),
+    });
+    if (res.ok) {
+      const data = await res.json() as { stats: PlayerStats; newAchievements: string[] };
+      saveLocalStats(data.stats);
+      return data;
+    }
+  } catch { /* network error — fall back */ }
+
+  // Fallback: compute locally
+  const local = recordSession(lovePoints);
+  return { stats: local, newAchievements: [] };
+}
+
+// ─── Load stats from DB (on app open) ────────────────────────────────────────
+export async function loadStatsFromDB(playerId: string): Promise<PlayerStats> {
+  try {
+    const res = await fetch(`/api/user/stats?playerId=${encodeURIComponent(playerId)}`);
+    if (res.ok) {
+      const data = await res.json() as { stats: PlayerStats | null };
+      if (data.stats) {
+        saveLocalStats(data.stats);
+        return data.stats;
+      }
+    }
+  } catch { /* ignore */ }
+  return getPlayerStats();
+}
+
+// ─── Local-only fallback (for SSR / no network) ──────────────────────────────
 export function recordSession(lovePoints: number): PlayerStats {
   const stats = getPlayerStats();
   const today = new Date().toDateString();
@@ -41,7 +88,7 @@ export function recordSession(lovePoints: number): PlayerStats {
   stats.totalLovePoints += lovePoints;
 
   if (stats.lastPlayedDate === today) {
-    // already played today — no streak change
+    // already played today
   } else if (stats.lastPlayedDate === yesterday) {
     stats.currentStreak++;
   } else {
@@ -50,7 +97,6 @@ export function recordSession(lovePoints: number): PlayerStats {
   stats.lastPlayedDate = today;
   stats.longestStreak = Math.max(stats.longestStreak, stats.currentStreak);
 
-  // Achievements check
   const earned: string[] = [];
   if (stats.totalSessions === 1)   earned.push('first_session');
   if (stats.totalSessions === 5)   earned.push('five_sessions');
@@ -63,10 +109,7 @@ export function recordSession(lovePoints: number): PlayerStats {
     if (!stats.achievements.includes(a)) stats.achievements.push(a);
   });
 
-  try {
-    localStorage.setItem('wof-stats', JSON.stringify(stats));
-  } catch { /* storage quota */ }
-
+  saveLocalStats(stats);
   return stats;
 }
 

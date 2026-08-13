@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { rooms, chatMessages } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
 
 export async function POST(
   req: NextRequest,
@@ -46,6 +47,7 @@ export async function POST(
       })
       .returning();
 
+    notifyRoomUpdate(code);
     return NextResponse.json({ message: msg });
   } catch (error) {
     console.error('Chat error:', error);
