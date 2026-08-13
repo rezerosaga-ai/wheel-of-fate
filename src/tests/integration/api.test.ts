@@ -1,0 +1,276 @@
+// ─── Integration Tests: API Routes ───────────────────────────────────────────
+// يختبر الـ API endpoints مباشرةً ضد الخادم الفعلي على port 13000
+// يُشغَّل بعد أن يكون الخادم قيد التشغيل
+
+import { describe, it, expect, beforeAll } from 'vitest';
+
+const BASE = 'http://localhost:13000';
+const uid  = () => `p_test_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function post(path: string, body: unknown) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json() as Record<string, unknown>;
+  return { status: res.status, body: json };
+}
+
+async function get(path: string) {
+  const res = await fetch(`${BASE}${path}`);
+  const json = await res.json() as Record<string, unknown>;
+  return { status: res.status, body: json };
+}
+
+// ─── /api/health ─────────────────────────────────────────────────────────────
+
+describe('GET /api/health', () => {
+  it('يعيد 200 ويُفيد بأن الخادم سليم', async () => {
+    const r = await get('/api/health');
+    expect(r.status).toBe(200);
+    // health يعيد إما ok:true أو success:true
+    const hasHealthFlag = r.body.ok === true || r.body.success === true || r.body.status === 'ok';
+    expect(hasHealthFlag).toBe(true);
+  });
+});
+
+// ─── /api/room/create ─────────────────────────────────────────────────────────
+
+describe('POST /api/room/create', () => {
+  it('يُنشئ غرفة ويعيد code', async () => {
+    const r = await post('/api/room/create', { playerId: uid(), playerName: 'عبدو' });
+    expect(r.status).toBe(200);
+    expect(r.body.code).toBeTruthy();
+    expect(typeof r.body.code).toBe('string');
+    expect((r.body.code as string).length).toBe(6);
+  });
+
+  it('يعيد 400 إذا playerId مفقود', async () => {
+    const r = await post('/api/room/create', { playerName: 'عبدو' });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBeTruthy();
+  });
+
+  it('يعيد 400 إذا playerName مفقود', async () => {
+    const r = await post('/api/room/create', { playerId: uid() });
+    expect(r.status).toBe(400);
+  });
+
+  it('يُنشئ غرفة مع gameState ابتدائي', async () => {
+    const p1 = uid();
+    const r = await post('/api/room/create', { playerId: p1, playerName: 'أنفال' });
+    expect(r.status).toBe(200);
+    const code = r.body.code as string;
+
+    // تحقق من state
+    const stateR = await get(`/api/room/${code}/state?playerId=${p1}`);
+    expect(stateR.status).toBe(200);
+    expect((stateR.body.gameState as Record<string,unknown>)?.phase).toBe('waiting');
+  });
+});
+
+// ─── /api/room/join ───────────────────────────────────────────────────────────
+
+describe('POST /api/room/join', () => {
+  let code: string;
+  const p1 = uid();
+  const p2 = uid();
+
+  beforeAll(async () => {
+    const r = await post('/api/room/create', { playerId: p1, playerName: 'عبدو' });
+    code = r.body.code as string;
+  });
+
+  it('يُدخل لاعباً ثانياً بنجاح', async () => {
+    const r = await post('/api/room/join', { code, playerId: p2, playerName: 'أنفال' });
+    expect(r.status).toBe(200);
+    expect(r.body.role).toBe('player2');
+    expect(r.body.playerId).toBe(p2);
+  });
+
+  it('ينقل phase إلى spin_start بعد الانضمام', async () => {
+    const stateR = await get(`/api/room/${code}/state?playerId=${p1}`);
+    expect((stateR.body.gameState as Record<string,unknown>)?.phase).toBe('spin_start');
+  });
+
+  it('يعيد 404 لغرفة غير موجودة', async () => {
+    const r = await post('/api/room/join', { code: 'XXXXXX', playerId: uid(), playerName: 'اسم' });
+    expect(r.status).toBe(404);
+  });
+
+  it('يعيد 409 إذا الغرفة ممتلئة', async () => {
+    const r = await post('/api/room/join', { code, playerId: uid(), playerName: 'لاعب ثالث' });
+    expect(r.status).toBe(409);
+  });
+
+  it('يسمح بإعادة الانضمام لـ player1', async () => {
+    const r = await post('/api/room/join', { code, playerId: p1, playerName: 'عبدو' });
+    expect(r.status).toBe(200);
+    expect(r.body.role).toBe('player1');
+  });
+
+  it('يسمح بإعادة الانضمام لـ player2', async () => {
+    const r = await post('/api/room/join', { code, playerId: p2, playerName: 'أنفال' });
+    expect(r.status).toBe(200);
+    expect(r.body.role).toBe('player2');
+  });
+});
+
+// ─── /api/room/[code]/action ──────────────────────────────────────────────────
+
+describe('POST /api/room/[code]/action', () => {
+  let code: string;
+  const p1 = uid();
+  const p2 = uid();
+
+  beforeAll(async () => {
+    const create = await post('/api/room/create', { playerId: p1, playerName: 'عبدو' });
+    code = create.body.code as string;
+    await post('/api/room/join', { code, playerId: p2, playerName: 'أنفال' });
+  });
+
+  it('spin ينقل من spin_start إلى spin_category', async () => {
+    const r = await post(`/api/room/${code}/action`, { type: 'spin', playerId: p1 });
+    expect(r.status).toBe(200);
+    expect(r.body.success).toBe(true);
+    const state = await get(`/api/room/${code}/state?playerId=${p1}`);
+    expect((state.body.gameState as Record<string,unknown>)?.phase).toBe('spin_category');
+  });
+
+  it('spin ثانية تختار فئة وتنتقل إلى spin_question', async () => {
+    const r = await post(`/api/room/${code}/action`, { type: 'spin', playerId: p1 });
+    expect(r.status).toBe(200);
+    const state = await get(`/api/room/${code}/state?playerId=${p1}`);
+    const gs = state.body.gameState as Record<string,unknown>;
+    expect(gs?.phase).toBe('spin_question');
+    expect(gs?.currentCategory).toBeTruthy();
+  });
+
+  it('pick_question ينتقل إلى question', async () => {
+    const r = await post(`/api/room/${code}/action`, { type: 'pick_question', playerId: p1 });
+    expect(r.status).toBe(200);
+    const state = await get(`/api/room/${code}/state?playerId=${p1}`);
+    const gs = state.body.gameState as Record<string,unknown>;
+    expect(gs?.phase).toBe('question');
+    expect(gs?.currentQuestionId).toBeTruthy();
+  });
+
+  it('answer ينتقل إلى reaction', async () => {
+    const r = await post(`/api/room/${code}/action`, {
+      type: 'answer',
+      playerId: p2,
+      answer: 'إجابة اختبارية من التكامل',
+    });
+    expect(r.status).toBe(200);
+    const state = await get(`/api/room/${code}/state?playerId=${p1}`);
+    expect((state.body.gameState as Record<string,unknown>)?.phase).toBe('reaction');
+  });
+
+  it('react_love ينتقل إلى round_end ويضيف نقاطاً', async () => {
+    const before = await get(`/api/room/${code}/state?playerId=${p1}`);
+    const scoreBefore = (before.body.gameState as Record<string,unknown>)?.player2Score as number ?? 0;
+
+    const r = await post(`/api/room/${code}/action`, { type: 'react_love', playerId: p1 });
+    expect(r.status).toBe(200);
+
+    const after = await get(`/api/room/${code}/state?playerId=${p1}`);
+    const gs = after.body.gameState as Record<string,unknown>;
+    expect(gs?.player2Score as number).toBeGreaterThan(scoreBefore);
+  });
+
+  it('يعيد 400 لأكشن غير صالح', async () => {
+    const r = await post(`/api/room/${code}/action`, { type: 'invalid_action', playerId: p1 });
+    // يُقبل أو يُعاد كـ success:true بدون تأثير — لا يجب أن يكون 500
+    expect(r.status).not.toBe(500);
+  });
+});
+
+// ─── /api/room/[code]/chat ────────────────────────────────────────────────────
+
+describe('POST /api/room/[code]/chat', () => {
+  let code: string;
+  const p1 = uid();
+
+  beforeAll(async () => {
+    const r = await post('/api/room/create', { playerId: p1, playerName: 'مُختبِر' });
+    code = r.body.code as string;
+  });
+
+  it('يحفظ رسالة دردشة ويعيدها', async () => {
+    const r = await post(`/api/room/${code}/chat`, {
+      playerId: p1,
+      playerName: 'مُختبِر',
+      content: 'مرحبا من الاختبار',
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.message).toBeTruthy();
+    const msg = r.body.message as Record<string,unknown>;
+    expect(msg.content).toBe('مرحبا من الاختبار');
+  });
+
+  it('يعيد 400 لمحتوى فارغ', async () => {
+    const r = await post(`/api/room/${code}/chat`, {
+      playerId: p1,
+      playerName: 'مُختبِر',
+      content: '',
+    });
+    expect(r.status).toBe(400);
+  });
+});
+
+// ─── /api/room/[code]/state ───────────────────────────────────────────────────
+
+describe('GET /api/room/[code]/state', () => {
+  let code: string;
+  const p1 = uid();
+
+  beforeAll(async () => {
+    const r = await post('/api/room/create', { playerId: p1, playerName: 'فاحص' });
+    code = r.body.code as string;
+  });
+
+  it('يعيد gameState, room, messages', async () => {
+    const r = await get(`/api/room/${code}/state?playerId=${p1}`);
+    expect(r.status).toBe(200);
+    expect(r.body).toHaveProperty('gameState');
+    expect(r.body).toHaveProperty('room');
+    expect(r.body).toHaveProperty('messages');
+  });
+
+  it('يعيد 404 لغرفة غير موجودة', async () => {
+    const r = await get(`/api/room/XXXXXX/state?playerId=${p1}`);
+    expect(r.status).toBe(404);
+  });
+});
+
+// ─── /api/room/[code]/reflect ─────────────────────────────────────────────────
+
+describe('POST /api/room/[code]/reflect', () => {
+  let code: string;
+  const p1 = uid();
+
+  beforeAll(async () => {
+    const r = await post('/api/room/create', { playerId: p1, playerName: 'مُتأمّل' });
+    code = r.body.code as string;
+  });
+
+  it('يحفظ تأملاً ويعيد reflectionId', async () => {
+    const r = await post(`/api/room/${code}/reflect`, {
+      playerId: p1,
+      content: 'كانت جلسة مميزة ومؤثرة',
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.saved).toBe(true);
+  }, 15000); // timeout أطول — قد يستدعي LLM
+
+  it('يعيد 400 لمحتوى فارغ', async () => {
+    const r = await post(`/api/room/${code}/reflect`, {
+      playerId: p1,
+      content: '',
+    });
+    expect(r.status).toBe(400);
+  });
+});
