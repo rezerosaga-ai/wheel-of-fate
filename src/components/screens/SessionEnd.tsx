@@ -209,6 +209,56 @@ export default function SessionEnd({
             </div>
           </div>
 
+          {/* ─── لوحة إحصاء الجلسة ─────────────────────────────────────────── */}
+          <div className="wof-card" style={{
+            background: 'linear-gradient(135deg, rgba(164,200,232,0.12), rgba(232,143,160,0.08))',
+            border: '1.5px solid rgba(164,200,232,0.3)',
+            padding: '16px',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--wof-text)', marginBottom: 12, textAlign: 'center' }}>
+              📊 ملخص جلستكم
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {[
+                { icon: '🎡', label: 'الجولات', value: roundNumber },
+                { icon: '❤️', label: 'لحظات حب', value: loveCounter },
+                { icon: '🏆', label: `نقاط ${player1Name.slice(0,6)}`, value: player1Score },
+                { icon: '🏆', label: `نقاط ${player2Name.slice(0,6)}`, value: player2Score },
+                { icon: '💫', label: 'مجموع النقاط', value: player1Score + player2Score },
+                { icon: '📖', label: 'أسئلة أُجيبت', value: Math.max(roundNumber, 1) },
+              ].map(({ icon, label, value }) => (
+                <div key={label} style={{
+                  background: 'rgba(255,255,255,0.7)',
+                  borderRadius: 12,
+                  padding: '10px 12px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 18, marginBottom: 2 }}>{icon}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--wof-text)' }}>{value}</div>
+                  <div style={{ fontSize: 11, color: 'var(--wof-text-secondary)', fontWeight: 600 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            {/* Progress bar: love meter */}
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--wof-text-secondary)', marginBottom: 4, textAlign: 'center' }}>
+                مستوى التقارب
+              </div>
+              <div style={{ height: 8, background: 'rgba(232,143,160,0.2)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.round((loveCounter / Math.max(roundNumber, 1)) * 100))}%`,
+                  background: 'linear-gradient(90deg, #F4A8B8, #E88FA0)',
+                  borderRadius: 99,
+                  transition: 'width 1s ease',
+                }} />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--wof-text-secondary)', textAlign: 'left', marginTop: 2 }}>
+                {Math.min(100, Math.round((loveCounter / Math.max(roundNumber, 1)) * 100))}% لحظات دافئة
+              </div>
+            </div>
+          </div>
+
           {/* Streak update */}
           {statsAfter && (
             <div style={{

@@ -3,6 +3,26 @@ import React, { useState } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { api } from '@/lib/api';
 
+// ─── Report helper ────────────────────────────────────────────────────────────
+async function reportQuestion(
+  questionId: number, reason: string, playerId: string, roomCode: string,
+): Promise<void> {
+  try {
+    await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId, reason, playerId, roomCode }),
+    });
+  } catch { /* silent */ }
+}
+
+const REPORT_REASONS: { value: string; label: string }[] = [
+  { value: 'inappropriate', label: '🚫 سؤال غير لائق' },
+  { value: 'confusing',     label: '❓ سؤال غير واضح' },
+  { value: 'duplicate',     label: '🔁 سؤال مكرر' },
+  { value: 'other',         label: '📝 سبب آخر' },
+];
+
 interface QuestionCardProps {
   questionId: number | null;
   questionText: string;
@@ -39,6 +59,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 export default function QuestionCard({
+  questionId,
   questionText,
   category,
   categoryEmoji,
@@ -56,6 +77,8 @@ export default function QuestionCard({
   const [showReflection, setShowReflection] = useState(false);
   const [reflection, setReflection] = useState('');
   const [reflectionSaved, setReflectionSaved] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
 
   const submitAnswer = async () => {
     if (!myAnswer.trim()) return;
@@ -82,6 +105,13 @@ export default function QuestionCard({
   };
 
   const currentQuestion = deepenQuestion ?? questionText;
+
+  const handleReport = async (reason: string) => {
+    if (!questionId) return;
+    await reportQuestion(questionId, reason, player?.id ?? 'unknown', roomCode);
+    setReportDone(true);
+    setTimeout(() => { setShowReport(false); setReportDone(false); }, 1800);
+  };
 
   return (
     <div>
@@ -123,6 +153,52 @@ export default function QuestionCard({
         <p style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.7, color: 'var(--wof-text)', margin: 0 }}>
           {currentQuestion}
         </p>
+
+        {/* Report button — subtle, bottom-right */}
+        {questionId && !deepenQuestion && (
+          <div style={{ textAlign: 'left', marginTop: 10 }}>
+            {!showReport ? (
+              <button
+                onClick={() => setShowReport(true)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 11, color: 'var(--wof-text-secondary)',
+                  opacity: 0.55, padding: 0,
+                }}
+                aria-label="إبلاغ عن هذا السؤال"
+              >
+                ⚑ إبلاغ
+              </button>
+            ) : reportDone ? (
+              <span style={{ fontSize: 11, color: 'var(--wof-success)', fontWeight: 700 }}>✅ تم الإبلاغ</span>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                {REPORT_REASONS.map((r) => (
+                  <button
+                    key={r.value}
+                    onClick={() => { void handleReport(r.value); }}
+                    style={{
+                      background: 'rgba(220,50,50,0.08)', border: '1px solid rgba(220,50,50,0.2)',
+                      borderRadius: 8, padding: '3px 9px', fontSize: 11, cursor: 'pointer',
+                      color: '#C0392B', fontFamily: 'var(--wof-font)',
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowReport(false)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 11, color: 'var(--wof-text-secondary)', padding: '3px 6px',
+                  }}
+                >
+                  إلغاء
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Who answers */}

@@ -32,6 +32,7 @@
     "test:k6": "k6 run src/tests/load/load-test.k6.js"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "drizzle-orm": "^0.45.1",
     "lucide-react": "^0.469.0",
     "next": "^16.2.6",

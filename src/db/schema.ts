@@ -148,6 +148,16 @@ export const questions = pgTable('wof_questions', {
   sourceReflectionId: integer('source_reflection_id'), // if adaptive, which reflection triggered it
 });
 
+// ─── Question Reports (user-flagged questions) ────────────────────────────────
+export const questionReports = pgTable('wof_question_reports', {
+  id: serial('id').primaryKey(),
+  questionId: integer('question_id').notNull(),
+  reason: text('reason').notNull(), // 'inappropriate' | 'confusing' | 'duplicate' | 'other'
+  playerId: text('player_id').notNull(),
+  roomCode: text('room_code'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ─── Conflict sessions ────────────────────────────────────────────────────────
 export const conflictSessions = pgTable('wof_conflict_sessions', {
   id: serial('id').primaryKey(),
