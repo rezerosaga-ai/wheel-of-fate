@@ -14,6 +14,16 @@
 | **Vercel Dashboard** | `https://vercel.com/wheel2/wheel-of-fate` |
 | **Dev Server** | `http://localhost:13000` (port ثابت) |
 
+### 📥 رابط تحميل التطبيق .APK
+
+| الرابط | الوصف |
+|--------|-------|
+| **صفحة التحميل** | `https://wheel-of-fate-three.vercel.app/download` |
+| **APK مباشر** | `https://wheel-of-fate-three.vercel.app/wheel-of-fate.apk` |
+
+> ملف APK حجمه ~1.2 MB — يعمل على Android مباشرة بدون Google Play.
+> لتحديث الـ APK: استبدل ملف `public/wheel-of-fate.apk` وادفع للـ `main`.
+
 ---
 
 ## 🛠 البيئة التقنية
