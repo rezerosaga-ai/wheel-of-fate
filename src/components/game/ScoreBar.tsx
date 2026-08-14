@@ -9,6 +9,7 @@ interface ScoreBarProps {
   loveCounter: number;
   roundNumber: number;
   currentPlayerIdx: number;
+  answerPhase?: boolean;
 }
 
 export default function ScoreBar({
@@ -19,6 +20,7 @@ export default function ScoreBar({
   loveCounter,
   roundNumber,
   currentPlayerIdx,
+  answerPhase = false,
 }: ScoreBarProps) {
   const total = player1Score + player2Score;
   const p1Pct = total === 0 ? 50 : Math.round((player1Score / total) * 100);
@@ -70,7 +72,11 @@ export default function ScoreBar({
             borderRadius: 20, padding: '3px 10px', letterSpacing: 0.3,
           }}
         >
-          {p1Active ? `✨ دور ${player1Name}` : `✨ دور ${player2Name}`}
+          {answerPhase
+            ? `📝 دور ${p1Active ? player2Name : player1Name} للإجابة`
+            : p1Active
+              ? `✨ دور ${player1Name}`
+              : `✨ دور ${player2Name}`}
         </span>
       </div>
 

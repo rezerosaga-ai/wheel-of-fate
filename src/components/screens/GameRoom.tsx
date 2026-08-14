@@ -330,6 +330,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
           player1Score={gameState.player1Score} player2Score={gameState.player2Score}
           loveCounter={gameState.loveCounter} roundNumber={gameState.roundNumber}
           currentPlayerIdx={gameState.currentPlayerIdx}
+          answerPhase={phase === 'question'}
         />
         <button
           onClick={toggleMusic}
@@ -367,6 +368,27 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
           <p style={{ fontSize: 16, color: '#3D3035', fontWeight: 600, textAlign: 'center' }}>
             ثانية من المواجهة 😤
           </p>
+          {!isMyTurn && (
+            <p style={{ fontSize: 13, color: '#6B5B4F', fontWeight: 600, textAlign: 'center', marginTop: 4 }}>
+              إذا ضحكت، أضغط الزر بالأسفل 👇
+            </p>
+          )}
+        </div>
+      )}
+      {/* Early-bail button for the challenged player (shown under the overlay) */}
+      {showDontLaugh && !isMyTurn && (
+        <div style={{ position: 'fixed', bottom: 28, left: 0, right: 0, zIndex: 210, textAlign: 'center' }}>
+          <button
+            className="wof-btn"
+            onClick={() => doAction('next_round')}
+            disabled={isActionPending}
+            style={{
+              background: 'linear-gradient(135deg, #F25C78, #E84065)',
+              color: 'white', fontWeight: 800, fontSize: 16,
+              boxShadow: '0 6px 20px rgba(232,64,101,0.45)',
+              minWidth: 220,
+            }}
+          >ضحكت! 😆 أنهِ التحدي</button>
         </div>
       )}
 
