@@ -9,7 +9,10 @@ export type Category =
   | 'bold'
   | 'future'
   | 'laugh'
-  | 'situations';
+  | 'situations'
+  | 'dare'
+  | 'would_you_rather'
+  | 'memory';
 
 export interface Question {
   id: number;
@@ -28,6 +31,9 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   future: '💭 المستقبل',
   laugh: '😂 الضحك',
   situations: '🎭 المواقف والافتراضات',
+  dare: '⚡ تحديات الجرأة',
+  would_you_rather: '🤔 لو خيّرتك',
+  memory: '💫 تذكّري',
 };
 
 export const CATEGORY_ICONS: Record<Category, string> = {
@@ -39,6 +45,9 @@ export const CATEGORY_ICONS: Record<Category, string> = {
   future: '💭',
   laugh: '😂',
   situations: '🎭',
+  dare: '⚡',
+  would_you_rather: '🤔',
+  memory: '💫',
 };
 
 export const CATEGORY_COLORS: Record<Category, string> = {
@@ -50,6 +59,9 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   future: '#B8D8C8',
   laugh: '#F2B880',
   situations: '#E8D4A0',
+  dare: '#FF6B6B',
+  would_you_rather: '#6BCB77',
+  memory: '#B4A7D6',
 };
 
 export const ALL_QUESTIONS: Question[] = [
@@ -781,6 +793,65 @@ export const ALL_QUESTIONS: Question[] = [
   { id: 605, category: 'situations', depth: 2, text: 'لو كتب أحد يعرفنا جيداً مراجعة صادقة عن علاقتنا، ما الإيجابي الذي سيذكره أولاً؟', deepenFollowUp: 'وما النصيحة التي سيعطيها لنا؟' },
 ];
 
+// ─── فئات جديدة ─────────────────────────────────────────────────────────────────
+
+export const DARE_QUESTIONS: Question[] = [
+  { id: 606, category: 'dare', depth: 1, text: 'غيّر صورتك الشخصية على واتساب لصورة مضحكة لمدة ساعة كاملة 📸' },
+  { id: 607, category: 'dare', depth: 1, text: 'أرسل صوتية تقول "أحبك" بصوت بطيئ وقمري 🌙' },
+  { id: 608, category: 'dare', depth: 2, text: 'اكتب أغنية قصيرة (4 أسطر) عن علاقتكما وأنشدها صوتيًا 🎵' },
+  { id: 609, category: 'dare', depth: 1, text: 'ارسم وجه الطرف الآخر على يديك وارسله صورة 🎨' },
+  { id: 610, category: 'dare', depth: 2, text: 'ادعِ أن الطرف الآخر هو نجمك المفضل لمدة 10 دقائق وقل له جمل معجبين 🌟' },
+  { id: 611, category: 'dare', depth: 1, text: 'أرسل آخر صورة سيلفي التقطتها في حياتك مهما كانت 💀' },
+  { id: 612, category: 'dare', depth: 2, text: 'قل "أنا أحبك" بكل لهجة تعرفها (فصحى، دارجة، أجنبية...) 💕' },
+  { id: 613, category: 'dare', depth: 1, text: 'غيّر اسم الطرف الآخر في هاتفك إلى لقب مضحك طوال اليوم 😂' },
+  { id: 614, category: 'dare', depth: 2, text: 'اكتب رسالة حب على ورقة، صوّرها، وأرسلها — ثم ارمها بعد أن يقرأها الطرف الآخر 💌' },
+  { id: 615, category: 'dare', depth: 1, text: 'قل جملة رومانسية بصوت جاد وكأنك ممثل في فيلم 🎬' },
+  { id: 616, category: 'dare', depth: 2, text: 'ارسم قلبًا بأصابعك على أي سطح وارسله صورة ❤️' },
+  { id: 617, category: 'dare', depth: 1, text: 'أرسل رسالة صوتية تردد فيها اسم الطرف الآخر 5 مرات بنبرات مختلفة 🗣️' },
+  { id: 618, category: 'dare', depth: 2, text: 'اصنع قصة قصيرة (3 جمل) بطلاها أنتما، وروها بصوت مثير 😏' },
+  { id: 619, category: 'dare', depth: 1, text: 'قل "أنت أجمل شيء حدث لي" مع نظرة مباشرة إذا كنتما معًا 👀' },
+  { id: 620, category: 'dare', depth: 2, text: 'أرسل فيديو مدته 10 ثوانٍ تصرخ فيه "أنا أحب [اسمه] أكثر من أي شيء!" 📹' },
+];
+
+export const WOULD_YOU_RATHER_QUESTIONS: Question[] = [
+  { id: 621, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: تقضي سنة كاملة مع الطرف الآخر في جزيرة مهجورة، أم سنة في مدينة كبيرة مزدحمة؟ 🏝️' },
+  { id: 622, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تعرف تاريخ وفاتك، أم أن تعرف كيف ستلتقي بحب جديد بعد هذا؟ ⏳' },
+  { id: 623, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن تنسى كل ذكرياتك مع الطرف الآخر، أم أن تتذكر كل لحظة لكن لا تستطيع أن تلمسه؟ 💭' },
+  { id: 624, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تعيش في فيلم رومانسي مع الطرف الآخر، أم في فيلم مغامرات؟ 🎬' },
+  { id: 625, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن تقرأ أفكار الطرف الآخر لمدة يوم واحد، أم أن يعرف هو أفكارك؟ 🧠' },
+  { id: 626, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تكون أغنى شخص في العالم لكن وحيدًا، أم فقيرًا لكن مع الطرف الآخر؟ 💰' },
+  { id: 627, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن تنام بجانب الطرف الآخر كل ليلة لكن لا تستطيعان الكلام، أم تتكلمان بلا توقف لكن تنامان بعيدًا؟ 🛏️' },
+  { id: 628, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تحيا 100 عام مع شخص تكرهه، أم 50 عامًا مع من تحب؟ ⏰' },
+  { id: 629, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن تعرف كل إجابة على أسئلة الطرف الآخر، أم أن لا يسألك أي سؤال أبدًا؟ ❓' },
+  { id: 630, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تعود بك الزمن 5 سنوات وتختار نفس الشخص، أم تلتقي به بعد 10 سنوات؟ 🔄' },
+  { id: 631, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن تسمع الطرف الآخر يقول "أحبك" كل يوم لكن لا يفعله، أم يفعله نادرًا بصدق؟ 💬' },
+  { id: 632, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تنسى يوم واحد فقط من علاقتكما (اختره)، أم أن تتذكره للأبد؟ 🗓️' },
+  { id: 633, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن يكون للطرف الآخر نفس الشخص كل يوم، أم أن يتغير شخصيته كل أسبوع؟ 🎭' },
+  { id: 634, category: 'would_you_rather', depth: 1, text: 'لو خيّرتك: أن تعيش في عالم خيالي (مثل هاري بوتر) مع الطرف الآخر، أم في عالمنا الحقيقي؟ ✨' },
+  { id: 635, category: 'would_you_rather', depth: 2, text: 'لو خيّرتك: أن يعرف الطرف الآخر كل أسرارك من يوم واحد، أم أن يحتفظ بسر واحد كبير لا يكتشفه أبدًا؟ 🤫' },
+];
+
+export const MEMORY_QUESTIONS: Question[] = [
+  { id: 636, category: 'memory', depth: 1, text: 'ما أول شيء لفت انتباهك في الطرف الآخر؟ 👀' },
+  { id: 637, category: 'memory', depth: 2, text: 'ما اللحظة التي قلت فيها في بالك "هذا الشخص مختلف"؟ ✨' },
+  { id: 638, category: 'memory', depth: 1, text: 'ما أول رسالة أرسلها لك الطرف الآخر ولم تنسها حتى الآن؟ 💬' },
+  { id: 639, category: 'memory', depth: 2, text: 'ما الموقف الذي ضحكت فيه من قلبك بجانبه و لم تنسه؟ 😂' },
+  { id: 640, category: 'memory', depth: 1, text: 'ما أول حلم حلمته عنه (مستقبل، سفر، بيت...)؟ 🏠' },
+  { id: 641, category: 'memory', depth: 2, text: 'ما أكثر لحظة شعرت فيها أنه/هي "يتفهمك" بدون كلام؟ 🤝' },
+  { id: 642, category: 'memory', depth: 1, text: 'ما الأغنية التي تذكّرك به/بها فورًا عندما تسمعها؟ 🎵' },
+  { id: 643, category: 'memory', depth: 2, text: 'ما أول مرة شعرت فيها بأن قلبك ينبض بشكل مختلف عندما كنت معه/معها؟ 💓' },
+  { id: 644, category: 'memory', depth: 1, text: 'ما أكثر نكتة أو مقولة مضحكة قلتها أنتما ولا تنساها؟ 😆' },
+  { id: 645, category: 'memory', depth: 2, text: 'ما اللحظة التي شعرت فيها أنك لا تريد أن تنتهي؟ 🌅' },
+  { id: 646, category: 'memory', depth: 1, text: 'ما أول هدية (مادية أو معنوية) أعطيتك إياها ولم تنسها؟ 🎁' },
+  { id: 647, category: 'memory', depth: 2, text: 'ما أكثر موقف محرج مررتما به معًا وما زلتما تضحكان منه؟ 😅' },
+  { id: 648, category: 'memory', depth: 1, text: 'ما الكلمة أو الجملة التي قالها لك مرة واحدة وما زالت تدور في رأسك؟ 💭' },
+  { id: 649, category: 'memory', depth: 2, text: 'ما أكثر مرة شعرت فيها أنك محظوظ/محظوظة بسببه/بسببها؟ 🍀' },
+  { id: 650, category: 'memory', depth: 1, text: 'ما أول صورة جمعتكما التي حفظتها على هاتفك؟ 📸' },
+];
+
+// أضف الأسئلة الجديدة إلى ALL_QUESTIONS
+ALL_QUESTIONS.push(...DARE_QUESTIONS, ...WOULD_YOU_RATHER_QUESTIONS, ...MEMORY_QUESTIONS);
+
 // ─── Helper functions ─────────────────────────────────────────────────────────
 
 export function getQuestionsByCategory(category: Category): Question[] {
@@ -815,18 +886,24 @@ export const CATEGORIES: Category[] = [
   'future',
   'laugh',
   'situations',
+  'dare',
+  'would_you_rather',
+  'memory',
 ];
 
 // Weighted category distribution (approx from blueprint)
 export const CATEGORY_WEIGHTS: Record<Category, number> = {
-  love: 18,
-  relationship: 18,
-  personality: 14,
-  confessions: 10,
-  bold: 10,
-  future: 10,
-  laugh: 10,
-  situations: 10,
+  love: 14,
+  relationship: 14,
+  personality: 10,
+  confessions: 8,
+  bold: 8,
+  future: 8,
+  laugh: 8,
+  situations: 8,
+  dare: 8,
+  would_you_rather: 8,
+  memory: 8,
 };
 
 export function getWeightedRandomCategory(lastCategory?: Category | null): Category {
