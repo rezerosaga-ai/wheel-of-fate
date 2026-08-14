@@ -113,17 +113,16 @@ function FloatingPoints({ pts, onDone }: { pts: number; onDone: () => void }) {
   );
 }
 
-// ─── Phase transition wrapper ────────────────────────────────────────────────────
-function PhaseScreen({ phaseKey, children }: { phaseKey: string; children: React.ReactNode }) {
-  return (
-    <div
-      key={phaseKey}
-      style={{ animation: 'phase-slide-in 320ms cubic-bezier(0.25,0.46,0.45,0.94) both' }}
-    >
-      {children}
-    </div>
-  );
-}
+// ─── Phase transition wrapper (memoized to prevent remount flicker) ────────────
+const PhaseScreen = React.memo(({ phaseKey, children }: { phaseKey: string; children: React.ReactNode }) => (
+  <div
+    key={phaseKey}
+    style={{ animation: 'phase-slide-in 320ms cubic-bezier(0.25,0.46,0.45,0.94) both' }}
+  >
+    {children}
+  </div>
+));
+PhaseScreen.displayName = 'PhaseScreen';
 
 interface GameRoomProps {
   roomCode: string;
@@ -321,7 +320,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   const catColor = CATEGORY_COLOR[gameState.currentCategory ?? ''] ?? 'var(--wof-secondary)';
 
   // ─── Shared layout wrapper ──────────────────────────────────────────────────
-  const Layout = ({ children }: { children: React.ReactNode }) => (
+  const Layout = React.memo(({ children }: { children: React.ReactNode }) => (
     <div className="wof-screen wof-safe-top" style={{ padding: 0 }}>
       {/* Top bar */}
       <div style={{ position: 'relative' }}>
@@ -488,7 +487,8 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
         }
       `}</style>
     </div>
-  );
+  ));
+  Layout.displayName = 'Layout';
 
   // ─── session_end ──────────────────────────────────────────────────────────────
   if (phase === 'session_end') {

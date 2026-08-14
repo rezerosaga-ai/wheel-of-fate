@@ -2,7 +2,7 @@
 import React from 'react';
 import { api } from '@/lib/api';
 import { useGameStore } from '@/store/useGameStore';
-import { useRoomPolling } from '@/hooks/useRoomPolling';
+
 
 interface PlayerToolsProps {
   roomCode: string;
@@ -35,8 +35,20 @@ export default function PlayerTools({
   isMyTurn,
   currentAnswer,
 }: PlayerToolsProps) {
-  const { player, setActionPending, setActionError, isActionPending, setGameState } = useGameStore();
-  const { poll } = useRoomPolling(roomCode, 1000);
+  const { player, setActionPending, setActionError, isActionPending, setGameState, setRoom, setMessages, setOnlineStatus } = useGameStore();
+
+  // Direct fetch fallback (replaces useRoomPolling which caused constant re-render flicker)
+  const fetchState = async () => {
+    try {
+      const res = await fetch(`/api/room/${roomCode}/state?playerId=${encodeURIComponent(player?.id ?? '')}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.gameState) setGameState(data.gameState);
+      if (data.room) setRoom(data.room);
+      if (data.messages) setMessages(data.messages);
+      if (data.onlineStatus) setOnlineStatus(data.onlineStatus);
+    } catch { /* ignore */ }
+  };
 
   const dispatch = async (type: string) => {
     if (!player || isActionPending) return;
@@ -51,7 +63,7 @@ export default function PlayerTools({
       if (resData?.gameState) {
         setGameState(resData.gameState);
       } else {
-        await poll();
+        await fetchState();
       }
     }
   };

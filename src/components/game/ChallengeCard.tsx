@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { api } from '@/lib/api';
 import { useGameStore } from '@/store/useGameStore';
-import { useRoomPolling } from '@/hooks/useRoomPolling';
+
 import { getQuestionById, CATEGORY_LABELS } from '@/lib/questions';
 
 interface ChallengeCardProps {
@@ -29,8 +29,20 @@ export default function ChallengeCard({
   player2Name,
   currentCategory,
 }: ChallengeCardProps) {
-  const { player, isActionPending, setActionPending, setActionError } = useGameStore();
-  const { poll } = useRoomPolling(roomCode, 1000);
+  const { player, isActionPending, setActionPending, setActionError, setGameState, setRoom, setMessages, setOnlineStatus } = useGameStore();
+
+  // Direct fetch fallback (replaces useRoomPolling which caused constant re-render flicker)
+  const fetchState = async () => {
+    try {
+      const res = await fetch(`/api/room/${roomCode}/state?playerId=${encodeURIComponent(player?.id ?? '')}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.gameState) setGameState(data.gameState);
+      if (data.room) setRoom(data.room);
+      if (data.messages) setMessages(data.messages);
+      if (data.onlineStatus) setOnlineStatus(data.onlineStatus);
+    } catch { /* ignore */ }
+  };
   const [answerText, setAnswerText] = useState('');
 
   const myId = player?.id ?? '';
@@ -58,7 +70,7 @@ export default function ChallengeCard({
       setActionError(res.error);
     } else {
       setAnswerText('');
-      await poll();
+      await fetchState();
     }
   };
 

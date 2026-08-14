@@ -25,8 +25,8 @@ export default function ChatPanel({ roomCode, isOpen, onClose }: ChatPanelProps)
   useEffect(() => {
     if (isOpen) {
       const t = setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 80);
+        bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }, 100);
       return () => clearTimeout(t);
     }
   }, [messages, isOpen]);
@@ -79,8 +79,6 @@ export default function ChatPanel({ roomCode, isOpen, onClose }: ChatPanelProps)
         display: 'flex', flexDirection: 'column',
         background: '#ECE5DD',
         direction: 'rtl',
-        // نمنع الـ viewport resize من إعادة render الـ layout
-        contain: 'layout',
       }}
     >
       {/* ── Header ────────────────────────────────────────────────────────────── */}
@@ -266,7 +264,6 @@ export default function ChatPanel({ roomCode, isOpen, onClose }: ChatPanelProps)
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKey}
             autoComplete="off"
-            autoCorrect="off"
             // لا نستخدم autoFocus — اللاعب يضغط بنفسه لتجنب تراقص لوحة المفاتيح
             inputMode="text"
             enterKeyHint="send"

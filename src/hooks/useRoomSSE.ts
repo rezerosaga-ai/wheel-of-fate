@@ -15,7 +15,7 @@ import { useGameStore } from '@/store/useGameStore';
 
 const SSE_RETRY_BASE_MS = 1_500;
 const SSE_RETRY_MAX_MS  = 15_000;
-const POLL_FALLBACK_MS  = 5_000;   // fallback إذا EventSource غير مدعوم
+const POLL_FALLBACK_MS  = 2_000;   // fallback إذا EventSource غير مدعوم
 
 interface StatePayload {
   room: Parameters<typeof useGameStore.getState>['length'] extends number ? NonNullable<ReturnType<typeof useGameStore.getState>['room']> : never;
