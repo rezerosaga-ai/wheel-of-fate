@@ -6,10 +6,10 @@ import { useGameStore } from '@/store/useGameStore';
 
 interface PlayerToolsProps {
   roomCode: string;
-  myBomb: number;
-  mySkip: number;
-  myDeepen: number;
-  myDontLaugh: number;
+  myBomb?: number;
+  mySkip?: number;
+  myDeepen?: number;
+  myDontLaugh?: number;
   phase: string;
   isMyTurn: boolean;
   currentAnswer: string | null;
@@ -92,33 +92,33 @@ export default function PlayerTools({
             <ToolButton
               emoji="💣"
               label="قنبلة"
-              count={myBomb}
+              count={myBomb ?? 0}
               tooltip="أرسل السؤال للآخر"
-              disabled={!isMyTurn || myBomb <= 0 || isActionPending}
+              disabled={!isMyTurn || (myBomb ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_bomb')}
             />
             <ToolButton
               emoji="⏭"
               label="تخطّي"
-              count={mySkip}
+              count={mySkip ?? 0}
               tooltip="تخطّي السؤال — ٣ مرات فقط"
-              disabled={!isMyTurn || mySkip <= 0 || isActionPending}
+              disabled={!isMyTurn || (mySkip ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_skip')}
             />
             <ToolButton
               emoji="🔍"
               label="تعمّق"
-              count={myDeepen}
+              count={myDeepen ?? 0}
               tooltip="اطلب إجابة أعمق"
-              disabled={!isMyTurn || myDeepen <= 0 || isActionPending}
+              disabled={!isMyTurn || (myDeepen ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_deepen')}
             />
             <ToolButton
               emoji="😂"
               label="لا تضحك"
-              count={myDontLaugh}
+              count={myDontLaugh ?? 0}
               tooltip="تحدّي: ٣٠ ثانية بدون ضحك!"
-              disabled={myDontLaugh <= 0 || isActionPending}
+              disabled={(myDontLaugh ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_dont_laugh')}
             />
           </div>

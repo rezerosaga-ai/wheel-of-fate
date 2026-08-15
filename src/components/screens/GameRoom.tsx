@@ -14,24 +14,63 @@ import FateCard from '@/components/game/FateCard';
 import KnowMe from '@/components/game/KnowMe';
 import ChallengeCard from '@/components/game/ChallengeCard';
 import SessionEnd from '@/components/screens/SessionEnd';
+import { GameRoomLayout, PhaseScreen, type FloatPoint } from '@/components/screens/GameRoomLayout';
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  love: '❤️', relationship: '🫂', personality: '🧠',
-  confessions: '🪞', bold: '🔥', laugh: '😂', situations: '🎭', future: '💭',
-  daily_life: '🌿', deep_feelings: '💜', dreams: '⭐', past: '📸',
-  trust: '🔐', fun: '😄', growth: '🌱',
+  love:             '❤️',
+  relationship:     '🫂',
+  personality:      '🧠',
+  confessions:      '🪞',
+  bold:             '🔥',
+  laugh:            '😂',
+  situations:       '🎭',
+  future:           '💭',
+  daily_life:       '🌿',
+  deep_feelings:    '💜',
+  dreams:           '⭐',
+  past:             '📸',
+  trust:            '🔐',
+  fun:              '😄',
+  growth:           '🌱',
+  would_you_rather: '🤔',
 };
 
 const CATEGORY_LABEL_AR: Record<string, string> = {
-  love: 'الحب', relationship: 'علاقتنا', personality: 'الشخصية والأفكار',
-  confessions: 'الاعترافات', bold: 'الجريئة', laugh: 'الضحك',
-  situations: 'المواقف والافتراضات', future: 'المستقبل',
+  love:             'الحب',
+  relationship:     'علاقتنا',
+  personality:      'الشخصية والأفكار',
+  confessions:      'الاعترافات',
+  bold:             'الجريئة',
+  laugh:            'الضحك',
+  situations:       'المواقف والافتراضات',
+  future:           'المستقبل',
+  would_you_rather: 'لو خيّرتك',
+  daily_life:       'حياتنا اليومية',
+  deep_feelings:    'مشاعر عميقة',
+  dreams:           'الأحلام والطموحات',
+  past:             'الذكريات',
+  trust:            'الثقة',
+  fun:              'المرح',
+  growth:           'النمو الشخصي',
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
-  love: '#F4A8B8', relationship: '#F9C8D3', personality: '#A8C5E8',
-  confessions: '#C9B8E8', bold: '#E8926A', future: '#B8D8C8',
-  laugh: '#F9D080', situations: '#E8D4A0',
+  love:             '#F4A8B8',
+  relationship:     '#F9C8D3',
+  personality:      '#A8C5E8',
+  confessions:      '#C9B8E8',
+  bold:             '#E8926A',
+  future:           '#B8D8C8',
+  laugh:            '#F9D080',
+  situations:       '#E8D4A0',
+  would_you_rather: '#6BCB77',
+  daily_life:       '#A8E6CF',
+  deep_feelings:    '#C9A8E8',
+  dreams:           '#FFD700',
+  past:             '#D4A8C8',
+  trust:            '#A8D4E8',
+  fun:              '#FFB347',
+  growth:           '#90EE90',
 };
 
 // ─── Confetti particle ──────────────────────────────────────────────────────────
@@ -91,39 +130,6 @@ function useConfetti() {
   return { particles, burst };
 }
 
-// ─── Floating points component ──────────────────────────────────────────────────
-interface FloatPoint { id: number; pts: number; }
-function FloatingPoints({ pts, onDone }: { pts: number; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 1200);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return (
-    <div style={{
-      position: 'fixed', top: '35%', left: '50%',
-      transform: 'translateX(-50%)',
-      zIndex: 300, pointerEvents: 'none',
-      animation: 'float-pts 1.2s cubic-bezier(0.2,1,0.4,1) both',
-      fontSize: 32, fontWeight: 900,
-      color: pts >= 2 ? '#D96C83' : '#77B89A',
-      textShadow: '0 2px 12px rgba(0,0,0,0.15)',
-    }}>
-      {pts >= 0 ? `+${pts}` : pts} ✨
-    </div>
-  );
-}
-
-// ─── Phase transition wrapper (memoized to prevent remount flicker) ────────────
-const PhaseScreen = React.memo(({ phaseKey, children }: { phaseKey: string; children: React.ReactNode }) => (
-  <div
-    key={phaseKey}
-    style={{ animation: 'phase-slide-in 320ms cubic-bezier(0.25,0.46,0.45,0.94) both' }}
-  >
-    {children}
-  </div>
-));
-PhaseScreen.displayName = 'PhaseScreen';
-
 interface GameRoomProps {
   roomCode: string;
 }
@@ -137,7 +143,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   } = useGameStore();
 
   const { poll } = useRoomSSE(roomCode);
-
   const [spinning, setSpinning] = useState(false);
   const [spinTarget, setSpinTarget] = useState<string | null>(null);
   const prevPhaseKey = useRef('');
@@ -163,7 +168,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   const floatIdRef = useRef(0);
 
   const showFloatingPoints = useCallback((pts: number) => {
-    const id = floatIdRef.current++;
+    const id = String(floatIdRef.current++);
     setFloatPoints((prev) => [...prev, { id, pts }]);
   }, []);
 
@@ -181,6 +186,8 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     } else if (phase === 'spin_start' || phase === 'spin_question') {
       BGM.play('default');
     } else if (phase === 'question') {
+      // #3 إغلاق الدردشة تلقائياً عند بدء مرحلة الإجابة
+      setChatOpen(false);
       const catTheme: Record<string, string> = {
         love: 'love', relationship: 'love', future: 'future',
         laugh: 'laugh', bold: 'bold', confessions: 'confession',
@@ -258,7 +265,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     } else {
       if (type.startsWith('react_')) {
         SFX.pointsGained();
-        // Points earned — show floating +pts and confetti
         const ptMap: Record<string, number> = {
           react_love: 1, react_laugh: 1, react_deep: 2,
           react_touching: 2, react_bold: 2, react_close: 3,
@@ -267,8 +273,15 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
         showFloatingPoints(pts);
         if (pts >= 2) confettiBurst(40);
       }
-      const resData = res.data as { gameState?: Parameters<typeof setGameState>[0] } | undefined;
+      const resData = res.data as { gameState?: Parameters<typeof setGameState>[0] & { phase?: string; currentCategory?: string } } | undefined;
       if (resData?.gameState) {
+        // fix: if spin resulted in spin_question phase, start wheel animation BEFORE
+        // applying state so the wheel visually spins toward the correct category
+        if (type === 'spin' && resData.gameState.phase === 'spin_question' && resData.gameState.currentCategory) {
+          setSpinTarget(resData.gameState.currentCategory as string);
+          setSpinning(true);
+          SFX.spinStart();
+        }
         setGameState(resData.gameState);
       } else {
         await poll();
@@ -276,11 +289,14 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     }
   };
 
-  const onSpinEnd = useCallback(() => {
+  const onSpinEnd = useCallback(async () => {
     setSpinning(false);
     SFX.spinEnd();
-    // Small confetti burst when category lands
     confettiBurst(25);
+    // fix: after the category wheel animation ends on the non-current-player side,
+    // the spin_category phase is already processed by the server.
+    // Nothing needed here — the polling will pick up spin_question state automatically.
+    // The CURRENT player's spin action (doAction('spin')) already transitions to spin_question.
   }, [confettiBurst]);
 
   if (!gameState || !player || !room) {
@@ -296,10 +312,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
 
   const isPlayer1  = player.role === 'player1';
   const isMyTurn   = (isPlayer1 && gameState.currentPlayerIdx === 0) || (!isPlayer1 && gameState.currentPlayerIdx === 1);
-  const myBomb     = isPlayer1 ? gameState.player1Bomb     : gameState.player2Bomb;
-  const mySkip     = isPlayer1 ? gameState.player1Skip     : gameState.player2Skip;
-  const myDeepen   = isPlayer1 ? gameState.player1Deepen   : gameState.player2Deepen;
-  const myDontLaugh= isPlayer1 ? gameState.player1DontLaugh: gameState.player2DontLaugh;
   const p1Name     = room.player1Name ?? 'لاعب 1';
   const p2Name     = room.player2Name ?? 'لاعب 2';
   const partnerName= isPlayer1 ? p2Name : p1Name;
@@ -319,177 +331,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
 
   const catColor = CATEGORY_COLOR[gameState.currentCategory ?? ''] ?? 'var(--wof-secondary)';
 
-  // ─── Shared layout wrapper ──────────────────────────────────────────────────
-  const Layout = React.memo(({ children }: { children: React.ReactNode }) => (
-    <div className="wof-screen wof-safe-top" style={{ padding: 0 }}>
-      {/* Top bar */}
-      <div style={{ position: 'relative' }}>
-        <ScoreBar
-          player1Name={p1Name} player2Name={p2Name}
-          player1Score={gameState.player1Score} player2Score={gameState.player2Score}
-          loveCounter={gameState.loveCounter} roundNumber={gameState.roundNumber}
-          currentPlayerIdx={gameState.currentPlayerIdx}
-          answerPhase={phase === 'question'}
-        />
-        <button
-          onClick={toggleMusic}
-          title={musicOn ? 'إيقاف الموسيقى' : 'تشغيل الموسيقى'}
-          style={{
-            position: 'absolute', top: 10, left: 12,
-            background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)',
-            border: '1.5px solid rgba(232,143,160,0.35)',
-            borderRadius: 20, width: 34, height: 34,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16, cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-            transition: 'opacity 0.2s, transform 0.15s',
-            opacity: musicOn ? 1 : 0.55, zIndex: 10,
-          }}
-        >
-          {musicOn ? '🎵' : '🔇'}
-        </button>
-      </div>
-
-      {/* Don't Laugh overlay */}
-      {showDontLaugh && (
-        <div className="wof-animate-in" style={{
-          position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(255,230,50,0.97)',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 16, padding: 32,
-        }}>
-          <div style={{ fontSize: 80 }}>😂</div>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#3D3035', textAlign: 'center' }}>لا تضحك!</h2>
-          <div style={{ fontSize: 72, fontWeight: 900, color: '#E88FA0', direction: 'ltr' }}>
-            {dontLaughSeconds}
-          </div>
-          <p style={{ fontSize: 16, color: '#3D3035', fontWeight: 600, textAlign: 'center' }}>
-            ثانية من المواجهة 😤
-          </p>
-          {!isMyTurn && (
-            <p style={{ fontSize: 13, color: '#6B5B4F', fontWeight: 600, textAlign: 'center', marginTop: 4 }}>
-              إذا ضحكت، أضغط الزر بالأسفل 👇
-            </p>
-          )}
-        </div>
-      )}
-      {/* Early-bail button for the challenged player (shown under the overlay) */}
-      {showDontLaugh && !isMyTurn && (
-        <div style={{ position: 'fixed', bottom: 28, left: 0, right: 0, zIndex: 210, textAlign: 'center' }}>
-          <button
-            className="wof-btn"
-            onClick={() => doAction('next_round')}
-            disabled={isActionPending}
-            style={{
-              background: 'linear-gradient(135deg, #F25C78, #E84065)',
-              color: 'white', fontWeight: 800, fontSize: 16,
-              boxShadow: '0 6px 20px rgba(232,64,101,0.45)',
-              minWidth: 220,
-            }}
-          >ضحكت! 😆 أنهِ التحدي</button>
-        </div>
-      )}
-
-      {/* Confetti canvas overlay */}
-      {confettiParts.length > 0 && (
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 250 }}>
-          {confettiParts.map((p) => (
-            <div
-              key={`${p.x.toFixed(0)}-${p.y.toFixed(0)}-${p.life}`}
-              style={{
-                position: 'absolute',
-                left: p.x, top: p.y,
-                width: p.shape === 'circle' ? p.size : p.size * 1.5,
-                height: p.size,
-                borderRadius: p.shape === 'circle' ? '50%' : 2,
-                background: p.color,
-                opacity: 1 - p.life / p.maxLife,
-                transform: `rotate(${p.rotation}deg)`,
-                pointerEvents: 'none',
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Floating points */}
-      {floatPoints.map((fp) => (
-        <FloatingPoints
-          key={fp.id} pts={fp.pts}
-          onDone={() => setFloatPoints((prev) => prev.filter((x) => x.id !== fp.id))}
-        />
-      ))}
-
-      {/* Error banner */}
-      {lastActionError && (
-        <div style={{
-          position: 'fixed', top: 80, left: 16, right: 16, zIndex: 200,
-          background: '#FFF0F0', border: '1px solid var(--wof-error)',
-          borderRadius: 12, padding: '10px 14px',
-          fontSize: 14, color: 'var(--wof-error)', fontWeight: 600,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          boxShadow: '0 4px 16px rgba(217,107,114,0.2)',
-          animation: 'phase-slide-in 250ms ease both',
-        }}>
-          <span>⚠️ {lastActionError}</span>
-          <button onClick={() => setActionError(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>✕</button>
-        </div>
-      )}
-
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 120px' }}>
-        {/* Turn indicator */}
-        <div style={{
-          textAlign: 'center', marginBottom: 12,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: isMyTurn
-              ? 'linear-gradient(135deg, rgba(232,143,160,0.15), rgba(217,108,131,0.1))'
-              : 'rgba(128,111,117,0.07)',
-            border: `1.5px solid ${isMyTurn ? 'rgba(232,143,160,0.4)' : 'rgba(128,111,117,0.15)'}`,
-            borderRadius: 999,
-            padding: '5px 14px',
-            fontSize: 13, fontWeight: 700,
-            color: isMyTurn ? 'var(--wof-primary)' : 'var(--wof-text-secondary)',
-            transition: 'all 300ms ease',
-          }}>
-            {isMyTurn ? (
-              <><span style={{ animation: 'wof-pulse-heart 1s infinite' }}>✨</span> دورك!</>
-            ) : (
-              <>⏳ دور {partnerName}</>
-            )}
-          </div>
-        </div>
-
-        {children}
-      </div>
-
-      <BottomBar chatOpen={chatOpen} setChatOpen={setChatOpen} unread={messages.length} />
-      <ChatPanel roomCode={roomCode} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
-
-      <style>{`
-        @keyframes phase-slide-in {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float-pts {
-          0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.5); }
-          20%  { opacity: 1; transform: translateX(-50%) translateY(-10px) scale(1.2); }
-          80%  { opacity: 1; transform: translateX(-50%) translateY(-50px) scale(1); }
-          100% { opacity: 0; transform: translateX(-50%) translateY(-70px) scale(0.8); }
-        }
-        @keyframes spin-btn-ready {
-          0%, 100% { box-shadow: 0 4px 20px rgba(217,108,131,0.4); }
-          50%       { box-shadow: 0 8px 32px rgba(217,108,131,0.7), 0 0 0 6px rgba(232,143,160,0.15); }
-        }
-      `}</style>
-    </div>
-  ));
-  Layout.displayName = 'Layout';
-
   // ─── session_end ──────────────────────────────────────────────────────────────
   if (phase === 'session_end') {
     return (
@@ -506,7 +347,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   // ─── spin_start ───────────────────────────────────────────────────────────────
   if (phase === 'spin_start') {
     return (
-      <Layout>
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
         <PhaseScreen phaseKey="spin_start">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, paddingTop: 12 }}>
             {/* Hero emoji with float */}
@@ -551,14 +392,14 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             </button>
           </div>
         </PhaseScreen>
-      </Layout>
+      </GameRoomLayout>
     );
   }
 
   // ─── fate_card ────────────────────────────────────────────────────────────────
   if (phase === 'fate_card') {
     return (
-      <Layout>
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
         <PhaseScreen phaseKey="fate_card">
           <FateCard
             roomCode={roomCode} pendingSpinResult={gameState.pendingSpinResult}
@@ -567,14 +408,14 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             isPlayer1={isPlayer1} player1Name={p1Name} player2Name={p2Name} phase={phase}
           />
         </PhaseScreen>
-      </Layout>
+      </GameRoomLayout>
     );
   }
 
   // ─── know_me ──────────────────────────────────────────────────────────────────
   if (phase === 'know_me') {
     return (
-      <Layout>
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
         <PhaseScreen phaseKey="know_me">
           <KnowMe
             roomCode={roomCode} question={gameState.knowMeQuestion}
@@ -583,14 +424,14 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             isPlayer1={isPlayer1} player1Name={p1Name} player2Name={p2Name}
           />
         </PhaseScreen>
-      </Layout>
+      </GameRoomLayout>
     );
   }
 
   // ─── challenge ────────────────────────────────────────────────────────────────
   if (phase === 'challenge') {
     return (
-      <Layout>
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
         <PhaseScreen phaseKey="challenge">
           <ChallengeCard
             roomCode={roomCode} challengeQuestionsLeft={gameState.challengeQuestionsLeft ?? 0}
@@ -601,7 +442,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             currentCategory={gameState.currentCategory}
           />
         </PhaseScreen>
-      </Layout>
+      </GameRoomLayout>
     );
   }
 
@@ -611,7 +452,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     const alreadyChallenged = gameState.challengeActive;
 
     return (
-      <Layout>
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
         <PhaseScreen phaseKey={`round_end-${gameState.roundNumber}`}>
           <div style={{
             display: 'flex', flexDirection: 'column',
@@ -694,14 +535,14 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             )}
           </div>
         </PhaseScreen>
-      </Layout>
+      </GameRoomLayout>
     );
   }
 
   // ─── don't_laugh ──────────────────────────────────────────────────────────────
   if (phase === 'dont_laugh') {
     return (
-      <Layout>
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
         {!showDontLaugh && (
           <div style={{ textAlign: 'center', paddingTop: 32 }}>
             <div style={{ fontSize: 48 }}>😂</div>
@@ -716,13 +557,13 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             )}
           </div>
         )}
-      </Layout>
+      </GameRoomLayout>
     );
   }
 
   // ─── spin_category + spin_question + question + reaction ─────────────────────
   return (
-    <Layout>
+    <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
       {(phase === 'spin_category' || phase === 'spin_question') && (
         <PhaseScreen phaseKey={phase}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
@@ -839,7 +680,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
 
             <PlayerTools
               roomCode={roomCode}
-              myBomb={myBomb} mySkip={mySkip} myDeepen={myDeepen} myDontLaugh={myDontLaugh}
               phase={phase} isMyTurn={isMyTurn} currentAnswer={gameState.currentAnswer}
             />
 
@@ -876,7 +716,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
           </div>
         </PhaseScreen>
       )}
-    </Layout>
+    </GameRoomLayout>
   );
 }
 
@@ -896,56 +736,6 @@ function ScoreChip({ name, score, highlight }: { name: string; score: number; hi
       <div style={{ fontSize: 24, fontWeight: 900, color: highlight ? 'var(--wof-accent)' : 'var(--wof-text)' }}>
         {score}
       </div>
-    </div>
-  );
-}
-
-// ─── Bottom Chat Bar ──────────────────────────────────────────────────────────────
-function BottomBar({
-  chatOpen, setChatOpen, unread,
-}: { chatOpen: boolean; setChatOpen: (o: boolean) => void; unread: number }) {
-  return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
-      borderTop: '1px solid var(--wof-border)',
-      padding: '10px 24px',
-      display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-      paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
-      zIndex: 50,
-    }}>
-      <button
-        onClick={() => setChatOpen(!chatOpen)}
-        style={{
-          position: 'relative',
-          background: chatOpen
-            ? 'linear-gradient(135deg,#E88FA0,#D96C83)'
-            : 'rgba(255,248,245,0.9)',
-          border: chatOpen ? 'none' : '1.5px solid rgba(232,143,160,0.3)',
-          borderRadius: 999, padding: '10px 22px',
-          cursor: 'pointer', fontSize: 14, fontWeight: 700,
-          color: chatOpen ? 'white' : 'var(--wof-text)',
-          display: 'flex', alignItems: 'center', gap: 6,
-          boxShadow: chatOpen
-            ? '0 4px 16px rgba(217,108,131,0.35)'
-            : '0 2px 8px rgba(0,0,0,0.06)',
-          transition: 'all 220ms cubic-bezier(0.34,1.56,0.64,1)',
-        }}
-      >
-        💬 الدردشة
-        {unread > 0 && !chatOpen && (
-          <span style={{
-            background: 'var(--wof-accent)', color: 'white',
-            borderRadius: '50%', width: 18, height: 18,
-            fontSize: 11, fontWeight: 800,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'absolute', top: -4, right: -4,
-            animation: 'wof-bounce-in 400ms ease both',
-          }}>
-            {Math.min(unread, 9)}
-          </span>
-        )}
-      </button>
     </div>
   );
 }

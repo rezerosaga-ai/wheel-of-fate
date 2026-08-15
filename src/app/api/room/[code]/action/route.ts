@@ -28,7 +28,7 @@ export async function POST(
       return NextResponse.json({ error: 'Game state not found' }, { status: 404 });
     }
 
-    const result = processAction(action, gs as GameStateData, {
+    const result = processAction(action, gs as unknown as GameStateData, {
       player1Id: room.player1Id,
       player2Id: room.player2Id,
       player1Name: room.player1Name,

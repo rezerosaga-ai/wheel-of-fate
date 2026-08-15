@@ -48,8 +48,9 @@ export default function ChallengeCard({
   const myId = player?.id ?? '';
   const isChallengedPlayer = myId !== challengeBy;
   const questionText = challengeQuestionId ? (getQuestionById(challengeQuestionId)?.text ?? '') : '';
+  // challengeBy هو player1Id أو player2Id — نستخدم الأسماء مباشرةً
   const challengerName = challengeBy
-    ? (challengeBy === (isPlayer1 ? player?.id : player?.id) ? 'أنت' : (isPlayer1 ? player2Name : player1Name))
+    ? (challengeBy === myId ? 'أنت' : (isPlayer1 ? player2Name : player1Name))
     : '?';
 
   // Who challenged whom

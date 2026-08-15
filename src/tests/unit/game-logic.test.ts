@@ -65,6 +65,9 @@ function makeState(overrides: Partial<GameStateData> = {}): GameStateData {
     challengeQuestionId: null,
     challengeAnswer: null,
     challengeBy: null,
+    doublePointsActive: false,
+    mysteryWheelActive: false,
+    customChallenge: null,
     ...overrides,
   };
 }
@@ -122,7 +125,7 @@ describe('resolveStartSpin', () => {
 
 describe('resolveCategorySpin', () => {
   it('يعيد فئة من قائمة الفئات المعرّفة', () => {
-    const validCategories = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations'];
+    const validCategories = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations', 'dare', 'would_you_rather', 'memory'];
     const state = makeState();
     for (let i = 0; i < 30; i++) {
       const result = resolveCategorySpin(state);

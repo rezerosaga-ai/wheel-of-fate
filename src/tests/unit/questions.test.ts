@@ -59,8 +59,8 @@ describe('ALL_QUESTIONS', () => {
 // ─── CATEGORIES ───────────────────────────────────────────────────────────────
 
 describe('CATEGORIES', () => {
-  it('يحتوي على 8 فئات', () => {
-    expect(CATEGORIES).toHaveLength(8);
+  it('يحتوي على 11 فئة', () => {
+    expect(CATEGORIES).toHaveLength(11);
   });
 
   it('يحتوي على جميع الفئات المتوقعة', () => {
@@ -73,7 +73,7 @@ describe('CATEGORIES', () => {
 
 describe('CATEGORY_LABELS', () => {
   it('لكل فئة تسمية عربية', () => {
-    const cats: Category[] = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations'];
+    const cats: Category[] = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations', 'dare', 'would_you_rather', 'memory'];
     cats.forEach((c) => {
       expect(CATEGORY_LABELS[c]).toBeTruthy();
       // يحتوي على نص عربي
@@ -107,8 +107,8 @@ describe('getRandomQuestion', () => {
     expect(allButLast).not.toContain(q?.id);
   });
 
-  it('يعمل لجميع الفئات الثماني', () => {
-    const cats: Category[] = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations'];
+  it('يعمل لجميع الفئات الإحدى عشرة', () => {
+    const cats: Category[] = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations', 'dare', 'would_you_rather', 'memory'];
     cats.forEach((cat) => {
       const q = getRandomQuestion(cat);
       expect(q?.category).toBe(cat);
@@ -139,7 +139,7 @@ describe('getQuestionById', () => {
 
 describe('getWeightedRandomCategory', () => {
   it('يعيد فئة صحيحة', () => {
-    const cats: Category[] = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations'];
+    const cats: Category[] = ['love', 'relationship', 'personality', 'confessions', 'bold', 'future', 'laugh', 'situations', 'dare', 'would_you_rather', 'memory'];
     for (let i = 0; i < 30; i++) {
       expect(cats).toContain(getWeightedRandomCategory(null));
     }

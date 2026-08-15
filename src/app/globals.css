@@ -85,6 +85,8 @@ html {
   color: var(--wof-text);
   height: 100%;
   overflow: hidden;
+  /* fix: prevent white flash during re-renders on mobile */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -94,7 +96,10 @@ body {
   font-family: var(--font-arabic);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* user-select only on non-input elements to allow keyboard on mobile */
+  /* fix: prevent white flash/flicker during React re-renders */
+  overscroll-behavior: none;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 #__next, main {

@@ -56,6 +56,10 @@ export interface GameStateData {
   challengeQuestionId: number | null;      // current challenge question
   challengeAnswer: string | null;
   challengeBy: string | null;             // playerId who issued the challenge
+  // ── Shop item effects ────────────────────────────────────────────────────
+  doublePointsActive: boolean;            // extra_item: double reaction points once
+  mysteryWheelActive: boolean;            // extra_item: spin a random bonus category
+  customChallenge: string | null;         // custom challenge question text
 }
 
 export type SpinType = 'start' | 'category' | 'question';
@@ -149,6 +153,9 @@ export type GameAction =
   // ── Challenge (UNO-style +2) ──────────────────────────────────────────────
   | { type: 'use_challenge'; playerId: string }   // asker issues challenge after reaction phase
   | { type: 'challenge_answer'; playerId: string; answer: string }  // responder answers challenge Q
+  // ── Shop item game actions ────────────────────────────────────────────────
+  | { type: 'trigger_mystery_wheel'; playerId: string }   // spin bonus mystery category
+  | { type: 'set_custom_challenge'; playerId: string; question: string } // set custom challenge text
   // Frontend aliases (normalised inside processAction)
   | { type: 'spin'; playerId: string }
   | { type: 'pick_question'; playerId: string }
@@ -397,10 +404,13 @@ export function processAction(
       const answererScoreKey = answererIdx === 0 ? 'player1Score' : 'player2Score';
 
       const currentAnswererScore = (state[answererScoreKey as keyof GameStateData] as number) ?? 0;
+      // ── double_points: if active, multiply reaction points by 2 and deactivate ──
+      const effectivePoints = state.doublePointsActive ? action.points * 2 : action.points;
       const updates: Partial<GameStateData> = {
-        [answererScoreKey]: currentAnswererScore + action.points,
+        [answererScoreKey]: currentAnswererScore + effectivePoints,
         loveCounter: (state.loveCounter ?? 0) + 1,
         reactionDone: true,
+        doublePointsActive: false, // consume the effect regardless
         updatedAt: now,
       };
 
@@ -644,6 +654,8 @@ export function processAction(
       if (action.playerId === state.challengeBy) return { updates: {} };
       if (!action.answer?.trim()) return { updates: {} };
 
+      // fix: نحفظ الإجابة أولاً قبل الانتقال للسؤال التالي
+      const trimmedAnswer = action.answer.trim();
       const remaining = state.challengeQuestionsLeft - 1;
 
       if (remaining > 0) {
@@ -653,9 +665,9 @@ export function processAction(
         const usedIds = [...(state.usedQuestionIds ?? []), nextQId];
         return {
           updates: {
+            challengeAnswer: trimmedAnswer,   // fix: نحفظ الإجابة في DB
             challengeQuestionsLeft: remaining,
             challengeQuestionId: nextQId,
-            challengeAnswer: null,
             usedQuestionIds: usedIds,
             updatedAt: now,
           } as Partial<GameStateData>,
@@ -669,11 +681,48 @@ export function processAction(
           challengeActive: false,
           challengeQuestionsLeft: 0,
           challengeQuestionId: null,
-          challengeAnswer: null,
+          challengeAnswer: trimmedAnswer,   // fix: نحفظ الإجابة الأخيرة
           challengeBy: null,
           updatedAt: now,
         } as Partial<GameStateData>,
         message: 'challenge_complete',
+      };
+    }
+
+    // ── Mystery wheel: spin a random bonus category for the current player ──────
+    case 'trigger_mystery_wheel': {
+      if (!state.mysteryWheelActive) return { updates: {} };
+      // Pick a truly random category (ignoring weight/consecutive rules)
+      const mysteryCategory = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+      return {
+        updates: {
+          currentCategory: mysteryCategory,
+          mysteryWheelActive: false,          // consume effect
+          phase: 'spin_question',
+          consecutiveCategoryCount: 1,
+          lastCategory: mysteryCategory,
+          pendingSpinResult: null,
+          updatedAt: now,
+        } as Partial<GameStateData>,
+        message: 'mystery_wheel_triggered',
+      };
+    }
+
+    // ── Custom challenge: set a player-defined question ─────────────────────────
+    case 'set_custom_challenge': {
+      if (!action.question?.trim()) return { updates: {} };
+      return {
+        updates: {
+          customChallenge: action.question.trim(),
+          phase: 'challenge',
+          challengeActive: true,
+          challengeQuestionsLeft: 1,
+          challengeQuestionId: null,          // custom text overrides ID
+          challengeAnswer: null,
+          challengeBy: action.playerId,
+          updatedAt: now,
+        } as Partial<GameStateData>,
+        message: 'custom_challenge_set',
       };
     }
 
