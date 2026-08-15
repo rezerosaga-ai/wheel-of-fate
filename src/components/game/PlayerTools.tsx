@@ -69,11 +69,10 @@ export default function PlayerTools({
   };
 
   // FIX #3 (جذري): في مرحلة question — currentPlayerIdx هو السائل، و"أدواتك" تُستخدم من المجيب!
-  // إذن canUseTool يجب أن يكون متاحاً للاثنين أثناء question (المجيب يستخدم أدواته على السؤال).
-  // في مراحل spin_category / spin_question — الدور للسائل الحقيقي (isMyTurn).
-  const canUseTool =
-    phase === 'question' ||
-    (['spin_category', 'spin_question'].includes(phase) && isMyTurn);
+  // إذن في question: الأدوات للمجيب حصرياً (!isMyTurn) — وهي أدوات على السؤال:
+  // قنبلة (أرسل السؤال للسائل ليُجيب)، تخطّي، تعمّق، لا تضحك.
+  // في مراحل spin_category / spin_question — لا توجد أدوات (السائل يختار فقط).
+  const canUseTool = phase === 'question' && !isMyTurn;
   // في reaction — currentPlayerIdx هو السائل، وهو من يرد بإيموجي على إجابة المجيب.
   const canReact = phase === 'reaction' && !!currentAnswer && isMyTurn;
 
@@ -98,8 +97,8 @@ export default function PlayerTools({
               emoji="💣"
               label="قنبلة"
               count={myBomb ?? 0}
-              tooltip="أرسل السؤال للآخر"
-              disabled={phase === 'question' ? (myBomb ?? 0) <= 0 || isActionPending : !isMyTurn || (myBomb ?? 0) <= 0 || isActionPending}
+              tooltip="أرسل السؤال للسائل — يجب أن يجيب هو الآن"
+              disabled={(myBomb ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_bomb')}
             />
             <ToolButton
@@ -107,7 +106,7 @@ export default function PlayerTools({
               label="تخطّي"
               count={mySkip ?? 0}
               tooltip="تخطّي السؤال — ٣ مرات فقط"
-              disabled={phase === 'question' ? (mySkip ?? 0) <= 0 || isActionPending : !isMyTurn || (mySkip ?? 0) <= 0 || isActionPending}
+              disabled={(mySkip ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_skip')}
             />
             <ToolButton
@@ -115,7 +114,7 @@ export default function PlayerTools({
               label="تعمّق"
               count={myDeepen ?? 0}
               tooltip="اطلب إجابة أعمق"
-              disabled={phase === 'question' ? (myDeepen ?? 0) <= 0 || isActionPending : !isMyTurn || (myDeepen ?? 0) <= 0 || isActionPending}
+              disabled={(myDeepen ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_deepen')}
             />
             <ToolButton

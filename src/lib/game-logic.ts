@@ -62,6 +62,8 @@ export interface GameStateData {
   doublePointsActive: boolean;            // extra_item: double reaction points once
   mysteryWheelActive: boolean;            // extra_item: spin a random bonus category
   customChallenge: string | null;         // custom challenge question text
+  // ── Bomb redirect ──────────────────────────────────────────────────────────
+  bombRedirect: 0 | 1 | null;             // after use_bomb: the OTHER player must answer
 }
 
 export type SpinType = 'start' | 'category' | 'question';
@@ -76,6 +78,8 @@ export interface SpinResult {
 export interface ActionResult {
   updates: Partial<GameStateData>;
   message?: string;
+  // Explicit error — UI must surface this (no more silent rejections)
+  error?: string;
 }
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -381,15 +385,28 @@ export function processAction(
     }
 
     case 'submit_answer': {
-      if (state.phase !== 'question') return { updates: {} };
-      // The OTHER player (not currentPlayer) answers — currentPlayer is the asker
-      // Allow either player to answer (in case of bomb redirect or future flexibility)
-      if (state.currentAnswer) return { updates: {} }; // already answered
+      if (state.phase !== 'question') return { updates: {}, error: 'لا يوجد سؤال نشط الآن' };
+      if (state.currentAnswer) return { updates: {}, error: 'تمت الإجابة على هذا السؤال بالفعل' };
+      // The OTHER player (not currentPlayer) answers — currentPlayer is the asker.
+      // Block the asker from answering their own question (unless a bomb redirected).
+      const askerIdx = state.currentPlayerIdx;
+      const actorIdx = playerIdx(action.playerId, room);
+      // bombRedirect = idx of the player who USED the bomb (= the answerer who deflected).
+      // Semantics: after a bomb, the ASKER must answer. Otherwise the ANSWERER (other player) answers.
+      const bombActive = state.bombRedirect !== null && state.bombRedirect !== undefined;
+      if (actorIdx === askerIdx) {
+        // Asker may answer ONLY when a bomb redirected the question to them
+        if (!bombActive) return { updates: {}, error: 'أنت من اختار السؤال — دور الطرف الآخر للإجابة' };
+      } else {
+        // Answerer may answer ONLY when no bomb is active
+        if (bombActive) return { updates: {}, error: 'القنبلة فُعلّت — السؤال انتقل للطرف الآخر' };
+      }
       return {
         updates: {
           phase: 'reaction',
           currentAnswer: action.answer,
           currentAnswerBy: action.playerId,
+          bombRedirect: null,
           updatedAt: now,
         },
       };
@@ -474,24 +491,32 @@ export function processAction(
           secretMsgRevealed: false,
           // reset dont_laugh
           dontLaughActive: false,
+          // reset bomb redirect
+          bombRedirect: null,
           updatedAt: now,
         },
       };
     }
 
     case 'use_bomb': {
-      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
-      if (state.phase !== 'question') return { updates: {} };
-      const idx = state.currentPlayerIdx as 0 | 1;
-      const bombKey = idx === 0 ? 'player1Bomb' : 'player2Bomb';
+      if (state.phase !== 'question') return { updates: {}, error: 'القنبلة متاحة فقط أثناء السؤال' };
+      if (state.currentAnswer) return { updates: {}, error: 'فات الأوان — تمّت الإجابة بالفعل' };
+      // Bomb belongs to the ANSWERER (the player who is NOT the asker).
+      // The asker (currentPlayerIdx) cannot use the bomb.
+      const askerIdx = state.currentPlayerIdx as 0 | 1;
+      const actorIdx = playerIdx(action.playerId, room) as 0 | 1;
+      if (actorIdx === askerIdx) {
+        return { updates: {}, error: 'القنبلة للمجيب فقط — أنت السائل' };
+      }
+      if (state.bombRedirect) return { updates: {}, error: 'يوجد قنبلة مفعّلة بالفعل' };
+      const bombKey = actorIdx === 0 ? 'player1Bomb' : 'player2Bomb';
       const bombCount = (state[bombKey as keyof GameStateData] as number) ?? 0;
-      if (bombCount <= 0) return { updates: {} };
-      // Bomb: send question to the other player
-      const otherIdx = idx === 0 ? 1 : 0;
+      if (bombCount <= 0) return { updates: {}, error: 'لا تملك قنابل متبقية' };
+      // Bomb: redirect the question to the asker — they must now answer.
       return {
         updates: {
           [bombKey]: bombCount - 1,
-          currentPlayerIdx: otherIdx,
+          bombRedirect: actorIdx, // the asker (askerIdx) must answer
           updatedAt: now,
         } as Partial<GameStateData>,
         message: 'bomb',
@@ -499,12 +524,15 @@ export function processAction(
     }
 
     case 'use_skip': {
-      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
-      if (state.phase !== 'question') return { updates: {} };
-      const idx = state.currentPlayerIdx as 0 | 1;
-      const skipKey = idx === 0 ? 'player1Skip' : 'player2Skip';
+      if (state.phase !== 'question') return { updates: {}, error: 'التخطي متاح فقط أثناء السؤال' };
+      if (state.currentAnswer) return { updates: {}, error: 'التخطي غير متاح بعد الإجابة' };
+      // Skip belongs to the ANSWERER (not the asker)
+      const askerIdx = state.currentPlayerIdx as 0 | 1;
+      const actorIdx = playerIdx(action.playerId, room) as 0 | 1;
+      if (actorIdx === askerIdx) return { updates: {}, error: 'التخطي للمجيب فقط — أنت السائل' };
+      const skipKey = actorIdx === 0 ? 'player1Skip' : 'player2Skip';
       const skipCount = (state[skipKey as keyof GameStateData] as number) ?? 0;
-      if (skipCount <= 0) return { updates: {} };
+      if (skipCount <= 0) return { updates: {}, error: 'لا تملك تخطيات متبقية' };
       // Skip: go to next question
       const result = resolveQuestionSpin(state);
       const qId = parseInt(result.value, 10);
@@ -518,6 +546,7 @@ export function processAction(
           currentAnswerBy: null,
           reactionDone: false,
           deepenQuestionText: null,
+          bombRedirect: null,
           updatedAt: now,
         } as Partial<GameStateData>,
         message: 'skip',
@@ -525,12 +554,14 @@ export function processAction(
     }
 
     case 'use_deepen': {
-      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
-      if (state.phase !== 'question') return { updates: {} };
-      const idx = state.currentPlayerIdx as 0 | 1;
-      const deepenKey = idx === 0 ? 'player1Deepen' : 'player2Deepen';
+      if (state.phase !== 'question') return { updates: {}, error: 'التعمق متاح فقط أثناء السؤال' };
+      // Deepen belongs to the ANSWERER (not the asker)
+      const askerIdx = state.currentPlayerIdx as 0 | 1;
+      const actorIdx = playerIdx(action.playerId, room) as 0 | 1;
+      if (actorIdx === askerIdx) return { updates: {}, error: 'التعمق للمجيب فقط — أنت السائل' };
+      const deepenKey = actorIdx === 0 ? 'player1Deepen' : 'player2Deepen';
       const deepenCount = (state[deepenKey as keyof GameStateData] as number) ?? 0;
-      if (deepenCount <= 0) return { updates: {} };
+      if (deepenCount <= 0) return { updates: {}, error: 'لا تملك تعمقات متبقية' };
 
       const { getQuestionById } = require('./questions') as typeof import('./questions');
       const q = getQuestionById(state.currentQuestionId ?? 0);
@@ -547,18 +578,23 @@ export function processAction(
     }
 
     case 'use_dont_laugh': {
-      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
-      if (state.phase !== 'question') return { updates: {} };
-      const idx = state.currentPlayerIdx as 0 | 1;
-      const dlKey = idx === 0 ? 'player1DontLaugh' : 'player2DontLaugh';
+      if (state.phase !== 'question') return { updates: {}, error: 'لا تضحك متاحة فقط أثناء السؤال' };
+      if (state.currentAnswer) return { updates: {}, error: 'لا تضحك غير متاحة بعد الإجابة' };
+      // DontLaugh belongs to the ANSWERER (not the asker)
+      const askerIdx = state.currentPlayerIdx as 0 | 1;
+      const actorIdx = playerIdx(action.playerId, room) as 0 | 1;
+      if (actorIdx === askerIdx) return { updates: {}, error: 'لا تضحك للمجيب فقط — أنت السائل' };
+      const dlKey = actorIdx === 0 ? 'player1DontLaugh' : 'player2DontLaugh';
       const dlCount = (state[dlKey as keyof GameStateData] as number) ?? 0;
-      if (dlCount <= 0) return { updates: {} };
+      if (dlCount <= 0) return { updates: {}, error: 'لا تملك تحديات لا-تضحك متبقية' };
+      // dont_laugh: the ANSWERER must keep a straight face while the ASKER tries to make them laugh.
       return {
         updates: {
           [dlKey]: dlCount - 1,
           phase: 'dont_laugh',
           dontLaughActive: true,
           dontLaughStartedAt: now,
+          // keep currentPlayerIdx = asker (the one trying to make the other laugh)
           updatedAt: now,
         } as Partial<GameStateData>,
       };

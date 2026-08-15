@@ -70,6 +70,7 @@ function makeState(overrides: Partial<GameStateData> = {}): GameStateData {
     doublePointsActive: false,
     mysteryWheelActive: false,
     customChallenge: null,
+    bombRedirect: null,
     ...overrides,
   };
 }
@@ -380,42 +381,73 @@ describe('processAction: next_round', () => {
 // ─── processAction: use_bomb ──────────────────────────────────────────────────
 
 describe('processAction: use_bomb', () => {
-  it('يُحوّل السؤال للاعب الآخر ويُقلّل البمبة', () => {
-    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player1Bomb: 2 });
-    const result = processAction({ type: 'use_bomb', playerId: 'p1' }, state, ROOM);
-    expect(result.updates.player1Bomb).toBe(1);
-    expect(result.updates.currentPlayerIdx).toBe(1);
+  it('المجيب يضرب القنبلة → السائل يجب أن يجيب (bombRedirect)', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player2Bomb: 2 });
+    const result = processAction({ type: 'use_bomb', playerId: 'p2' }, state, ROOM);
+    expect(result.updates.player2Bomb).toBe(1);
+    expect(result.updates.bombRedirect).toBe(1); // idx of player who used the bomb (answerer=1)
+    expect(result.updates.currentPlayerIdx).toBeUndefined(); // asker stays the asker
     expect(result.message).toBe('bomb');
   });
 
-  it('يرفض إذا لا توجد بمبات', () => {
-    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player1Bomb: 0 });
+  it('يرفض إذا السائل حاول ضرب القنبلة', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player1Bomb: 2 });
     const result = processAction({ type: 'use_bomb', playerId: 'p1' }, state, ROOM);
     expect(Object.keys(result.updates)).toHaveLength(0);
+    expect(result.error).toBeTruthy();
   });
 
-  it('يرفض من لاعب ليس دوره', () => {
-    const state = makeState({ phase: 'question', currentPlayerIdx: 0 });
+  it('يرفض إذا لا توجد بمبات', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player2Bomb: 0 });
     const result = processAction({ type: 'use_bomb', playerId: 'p2' }, state, ROOM);
     expect(Object.keys(result.updates)).toHaveLength(0);
+    expect(result.error).toBeTruthy();
+  });
+
+  it('بعد القنبلة: السائل يستطيع الإجابة، والمجيب لا يستطيع', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, bombRedirect: 1 });
+    const asker = processAction({ type: 'submit_answer', playerId: 'p1', answer: 'أنا أجيب' }, state, ROOM);
+    expect(asker.updates.phase).toBe('reaction');
+    expect(asker.updates.currentAnswerBy).toBe('p1');
+    expect(asker.updates.bombRedirect).toBeNull();
+
+    const state2 = makeState({ phase: 'question', currentPlayerIdx: 0, bombRedirect: 1 });
+    const answerer = processAction({ type: 'submit_answer', playerId: 'p2', answer: 'لا أنا' }, state2, ROOM);
+    expect(Object.keys(answerer.updates)).toHaveLength(0);
+    expect(answerer.error).toBeTruthy();
+  });
+
+  it('بدون قنبلة: السائل لا يستطيع الإجابة على سؤاله', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0 });
+    const result = processAction({ type: 'submit_answer', playerId: 'p1', answer: 'سؤال نفسي!' }, state, ROOM);
+    expect(Object.keys(result.updates)).toHaveLength(0);
+    expect(result.error).toBeTruthy();
   });
 });
 
 // ─── processAction: use_skip ──────────────────────────────────────────────────
 
 describe('processAction: use_skip', () => {
-  it('يُبدّل السؤال ويُقلّل التخطيات', () => {
-    const state = makeState({ phase: 'question', currentPlayerIdx: 0, currentCategory: 'love', player1Skip: 1 });
-    const result = processAction({ type: 'use_skip', playerId: 'p1' }, state, ROOM);
-    expect(result.updates.player1Skip).toBe(0);
+  it('المجيب يتخطّى السؤال ويقلّل التخطيات', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, currentCategory: 'love', player2Skip: 1 });
+    const result = processAction({ type: 'use_skip', playerId: 'p2' }, state, ROOM);
+    expect(result.updates.player2Skip).toBe(0);
     expect(result.updates.currentQuestionId).toBeTruthy();
     expect(result.message).toBe('skip');
   });
 
-  it('يرفض إذا لا توجد تخطيات', () => {
-    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player1Skip: 0 });
+  it('يرفض إذا السائل حاول التخطي', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player1Skip: 1 });
     const result = processAction({ type: 'use_skip', playerId: 'p1' }, state, ROOM);
     expect(Object.keys(result.updates)).toHaveLength(0);
+    expect(result.error).toBeTruthy();
+  });
+
+  it('يرفض إذا لا توجد تخطيات', () => {
+    const state = makeState({ phase: 'question', currentPlayerIdx: 0, player2Skip: 0 });
+    const result = processAction({ type: 'use_skip', playerId: 'p2' }, state, ROOM);
+    expect(Object.keys(result.updates)).toHaveLength(0);
+    expect(result.error).toBeTruthy();
   });
 });
 

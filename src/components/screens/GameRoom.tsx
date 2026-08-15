@@ -275,8 +275,22 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
         showFloatingPoints(pts);
         if (pts >= 2) confettiBurst(40);
       }
-      const resData = res.data as { gameState?: Parameters<typeof setGameState>[0] & { phase?: string; currentCategory?: string } } | undefined;
+      const resData = res.data as { success?: boolean; message?: string; error?: string; gameState?: Parameters<typeof setGameState>[0] & { phase?: string; currentCategory?: string; bombRedirect?: number | null } } | undefined;
       if (resData?.gameState) {
+        // FIX #7: إشعار القنبلة — يظهر بوضوح لمن انتقل إليه السؤال
+        // bombRedirect في السيرفر = idx اللاعب الذي يجب أن يجيب الآن (السائل)
+        // من استخدم القنبلة هو المجيب — لذا السؤال انتقل للـ bombRedirect (الآخر)
+        if (resData.message === 'bomb') {
+          const redirectIdx = resData.gameState.bombRedirect;
+          const isBombForMe =
+            redirectIdx !== null && redirectIdx !== undefined &&
+            ((isPlayer1 && redirectIdx === 0) || (!isPlayer1 && redirectIdx === 1));
+          setActionError(
+            isBombForMe
+              ? '💣 القنبلة! السؤال انتقل إليك — يجب أن تجيب الآن'
+              : '💣 لقد ضربت القنبلة — السؤال الآن على الطرف الآخر'
+          );
+        }
         // fix: if spin resulted in spin_question phase, start wheel animation BEFORE
         // applying state so the wheel visually spins toward the correct category
         if (type === 'spin' && resData.gameState.phase === 'spin_question' && resData.gameState.currentCategory) {
@@ -287,7 +301,8 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
         setGameState(resData.gameState);
         // FIX #5: إن لم تتقدم المرحلة مع success (اللاعب ضغط في غير دوره) أظهِر ملاحظة
         if (phaseBefore && resData.gameState.phase === phaseBefore && phaseBefore !== 'session_end') {
-          setActionError('⏳ ليس دورك الآن — انتظر دورك');
+          // Use the server's explicit error if available, otherwise a generic turn message
+          setActionError(res.error ?? '⏳ ليس دورك الآن — انتظر دورك');
         }
       } else {
         await poll();
@@ -595,6 +610,20 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             )}
           </div>
         )}
+      </GameRoomLayout>
+    );
+  }
+
+  // ─── Fallback: phase غير معروفة أو وسيطة → لا شاشة سوداء أبداً ────────────
+  const knownPhases = ['waiting', 'spin_start', 'spin_category', 'spin_question', 'question', 'reaction', 'round_end', 'fate_card', 'know_me', 'secret_msg', 'dont_laugh', 'session_end', 'challenge'];
+  if (phase && !knownPhases.includes(phase)) {
+    return (
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: 32, textAlign: 'center' }}>
+          <div style={{ fontSize: 48 }}>🔧</div>
+          <p style={{ fontSize: 15, fontWeight: 700 }}>حالة لعبة غير متوقعة — جارٍ الاستعادة…</p>
+          <button className="wof-btn wof-btn-primary" onClick={() => void poll()} style={{ minWidth: 180 }}>تحديث الحالة 🔄</button>
+        </div>
       </GameRoomLayout>
     );
   }

@@ -35,6 +35,14 @@ export async function POST(
       player2Name: room.player2Name,
     });
 
+    // Explicit error (e.g. wrong turn, invalid bomb use) — surface with 400, never silent
+    if (result.error) {
+      return NextResponse.json(
+        { success: false, error: result.error, message: result.error },
+        { status: 400 }
+      );
+    }
+
     if (Object.keys(result.updates).length > 0) {
       // If phase changes to 'playing', update room status too
       if (result.updates.phase && result.updates.phase !== 'waiting') {

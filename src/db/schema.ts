@@ -114,6 +114,9 @@ export const gameState = pgTable('wof_game_state', {
   // Conflict room topics
   conflictTopics: jsonb('conflict_topics').$type<string[]>().default([]),
 
+  // Bomb redirect: after use_bomb, this player idx must answer (null = none)
+  bombRedirect: integer('bomb_redirect'),
+
   // Used question IDs (to avoid repetition in session)
   usedQuestionIds: jsonb('used_question_ids').$type<number[]>().default([]),
 
