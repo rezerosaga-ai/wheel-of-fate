@@ -21,6 +21,8 @@ export interface GameStateData {
   currentAnswer: string | null;
   currentAnswerBy: string | null;
   reactionDone: boolean;
+  lastReactionBy: string | null;
+  lastReactionEmoji: string | null;
   player1Score: number;
   player2Score: number;
   loveCounter: number;
@@ -406,10 +408,16 @@ export function processAction(
       const currentAnswererScore = (state[answererScoreKey as keyof GameStateData] as number) ?? 0;
       // ── double_points: if active, multiply reaction points by 2 and deactivate ──
       const effectivePoints = state.doublePointsActive ? action.points * 2 : action.points;
+      // FIX #6: حفظ من ردّ ونوع الإيموجي حتى يظهر بوضوح للطرفين
+      const REACTION_EMOJI: Record<string, string> = {
+        love: '❤️', laugh: '😂', deep: '🧠', touching: '🥹', bold: '🔥', close: '⭐', surprised: '😲',
+      };
       const updates: Partial<GameStateData> = {
         [answererScoreKey]: currentAnswererScore + effectivePoints,
         loveCounter: (state.loveCounter ?? 0) + 1,
         reactionDone: true,
+        lastReactionBy: action.playerId,
+        lastReactionEmoji: REACTION_EMOJI[action.reactionType ?? ''] ?? '❤️',
         doublePointsActive: false, // consume the effect regardless
         updatedAt: now,
       };
