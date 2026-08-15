@@ -5,6 +5,34 @@ import { eq } from 'drizzle-orm';
 import { processAction, type GameAction, type GameStateData } from '@/lib/game-logic';
 import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
 
+// ── إرسال push notification للاعب الذي أصبح دوره ──────────────────────────────
+async function notifyTurn(
+  newPlayerIdx: number,
+  prevPlayerIdx: number,
+  room: { player1Id: string | null; player2Id: string | null; player1Name: string | null; player2Name: string | null },
+  baseUrl: string
+) {
+  if (newPlayerIdx === prevPlayerIdx) return; // لم يتغير الدور
+  const targetId   = newPlayerIdx === 0 ? room.player1Id   : room.player2Id;
+  const targetName = newPlayerIdx === 0 ? room.player1Name : room.player2Name;
+  if (!targetId) return;
+  try {
+    await fetch(`${baseUrl}/api/push/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerId: targetId,
+        payload: {
+          title: '🎡 دورك الآن!',
+          body:  `${targetName ?? 'اللاعب'} — أدِر العجلة وأجب عن السؤال`,
+          icon:  '/icon-192.png',
+          data:  { type: 'your_turn' },
+        },
+      }),
+    });
+  } catch { /* ignore — push is best-effort */ }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -27,6 +55,8 @@ export async function POST(
     if (!gs) {
       return NextResponse.json({ error: 'Game state not found' }, { status: 404 });
     }
+
+    const prevPlayerIdx = gs.currentPlayerIdx as number;
 
     const result = processAction(action, gs as unknown as GameStateData, {
       player1Id: room.player1Id,
@@ -59,6 +89,17 @@ export async function POST(
 
     // Notify all SSE subscribers in this room
     notifyRoomUpdate(code);
+
+    // Push notification عند تغيير الدور
+    if (
+      updatedGs &&
+      typeof updatedGs.currentPlayerIdx === 'number' &&
+      updatedGs.currentPlayerIdx !== prevPlayerIdx &&
+      updatedGs.phase === 'spin_category'
+    ) {
+      const baseUrl = req.nextUrl.origin;
+      void notifyTurn(updatedGs.currentPlayerIdx, prevPlayerIdx, room, baseUrl);
+    }
 
     return NextResponse.json({
       success: true,
