@@ -39,6 +39,8 @@ export interface GameStateServer {
   currentAnswer: string | null;
   currentAnswerBy: string | null;
   reactionDone: boolean;
+  lastReactionBy: string | null;
+  lastReactionEmoji: string | null;
   player1Score: number;
   player2Score: number;
   loveCounter: number;
