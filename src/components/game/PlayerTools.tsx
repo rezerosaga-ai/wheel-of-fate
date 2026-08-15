@@ -68,8 +68,13 @@ export default function PlayerTools({
     }
   };
 
-  const canUseTool = ['question', 'spin_category', 'spin_question'].includes(phase);
-  // الأسكر يرد — وهو اللاعب الحالي (isMyTurn)
+  // FIX #3 (جذري): في مرحلة question — currentPlayerIdx هو السائل، و"أدواتك" تُستخدم من المجيب!
+  // إذن canUseTool يجب أن يكون متاحاً للاثنين أثناء question (المجيب يستخدم أدواته على السؤال).
+  // في مراحل spin_category / spin_question — الدور للسائل الحقيقي (isMyTurn).
+  const canUseTool =
+    phase === 'question' ||
+    (['spin_category', 'spin_question'].includes(phase) && isMyTurn);
+  // في reaction — currentPlayerIdx هو السائل، وهو من يرد بإيموجي على إجابة المجيب.
   const canReact = phase === 'reaction' && !!currentAnswer && isMyTurn;
 
   return (
@@ -94,7 +99,7 @@ export default function PlayerTools({
               label="قنبلة"
               count={myBomb ?? 0}
               tooltip="أرسل السؤال للآخر"
-              disabled={!isMyTurn || (myBomb ?? 0) <= 0 || isActionPending}
+              disabled={phase === 'question' ? (myBomb ?? 0) <= 0 || isActionPending : !isMyTurn || (myBomb ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_bomb')}
             />
             <ToolButton
@@ -102,7 +107,7 @@ export default function PlayerTools({
               label="تخطّي"
               count={mySkip ?? 0}
               tooltip="تخطّي السؤال — ٣ مرات فقط"
-              disabled={!isMyTurn || (mySkip ?? 0) <= 0 || isActionPending}
+              disabled={phase === 'question' ? (mySkip ?? 0) <= 0 || isActionPending : !isMyTurn || (mySkip ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_skip')}
             />
             <ToolButton
@@ -110,7 +115,7 @@ export default function PlayerTools({
               label="تعمّق"
               count={myDeepen ?? 0}
               tooltip="اطلب إجابة أعمق"
-              disabled={!isMyTurn || (myDeepen ?? 0) <= 0 || isActionPending}
+              disabled={phase === 'question' ? (myDeepen ?? 0) <= 0 || isActionPending : !isMyTurn || (myDeepen ?? 0) <= 0 || isActionPending}
               onClick={() => dispatch('use_deepen')}
             />
             <ToolButton
