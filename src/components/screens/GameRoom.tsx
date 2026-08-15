@@ -258,6 +258,8 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     else if (type === 'react_bold') SFX.reactBold();
     else if (type === 'react_close') SFX.reactStar();
 
+    // FIX #5: التقاط phase قبل الإرسال لمقارنته بعده — إن لم يتقدم مع success فهو "ليس دورك"
+    const phaseBefore = gameState?.phase;
     const res = await api.sendAction(roomCode, { type, playerId: player.id, ...extra });
     setActionPending(false);
     if (res.error) {
@@ -283,6 +285,10 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
           SFX.spinStart();
         }
         setGameState(resData.gameState);
+        // FIX #5: إن لم تتقدم المرحلة مع success (اللاعب ضغط في غير دوره) أظهِر ملاحظة
+        if (phaseBefore && resData.gameState.phase === phaseBefore && phaseBefore !== 'session_end') {
+          setActionError('⏳ ليس دورك الآن — انتظر دورك');
+        }
       } else {
         await poll();
       }
@@ -316,6 +322,14 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   const p2Name     = room.player2Name ?? 'لاعب 2';
   const partnerName= isPlayer1 ? p2Name : p1Name;
   const phase      = gameState.phase;
+
+  // FIX #1: تحويل playerId (p_17...) إلى اسم اللاعب الحقيقي في كل مواضع العرض
+  const getPlayerName = useCallback((pid: string | null | undefined): string => {
+    if (!pid) return '';
+    if (pid === room.player1Id) return p1Name;
+    if (pid === room.player2Id) return p2Name;
+    return pid; // fallback: raw id (e.g. test-only ids)
+  }, [room.player1Id, room.player2Id, p1Name, p2Name]);
 
   const questionText = (() => {
     if (!gameState.currentQuestionId) return '';
@@ -446,6 +460,19 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     );
   }
 
+  // FIX #4: انتقال تلقائي من شاشة نهاية الجولة بعد 8 ثوانٍ (يمنع العلق)
+  const roundEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (phase !== 'round_end') return;
+    const roundKey = gameState?.roundNumber ?? 0;
+    if (roundEndTimerRef.current) clearTimeout(roundEndTimerRef.current);
+    roundEndTimerRef.current = setTimeout(() => {
+      // بعد 8 ثوانٍ من نهاية الجولة: ننتقل تلقائياً للجولة التالية (بصمت)
+      doAction('next_round').catch(() => {});
+    }, 8000);
+    return () => { if (roundEndTimerRef.current) clearTimeout(roundEndTimerRef.current); };
+  }, [phase, gameState?.roundNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── round_end ────────────────────────────────────────────────────────────────
   if (phase === 'round_end') {
     const lastAnswer     = gameState.currentAnswer;
@@ -523,14 +550,26 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
                 </button>
               </div>
             ) : (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 14, color: 'var(--wof-text-secondary)', fontWeight: 600,
-              }}>
-                <span className="wof-loading-dots" style={{ display: 'inline-flex' }}>
-                  <span /><span /><span />
-                </span>
-                في انتظار {partnerName}…
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 290 }}>
+                {/* FIX #4: حتى من ليس عنده الدور — زر متابعة متاح (الانتقال يتم من طرف أي لاعب) */}
+                <button
+                  className="wof-btn wof-btn-primary wof-btn-full"
+                  onClick={() => doAction('next_round')}
+                  disabled={isActionPending}
+                >
+                  {isActionPending
+                    ? <span className="wof-loading-dots"><span /><span /><span /></span>
+                    : '▶ أكمِل الجولة التالية'}
+                </button>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+                  fontSize: 13, color: 'var(--wof-text-secondary)', fontWeight: 600,
+                }}>
+                  <span className="wof-loading-dots" style={{ display: 'inline-flex' }}>
+                    <span /><span /><span />
+                  </span>
+                                    في انتظار {partnerName}…
+                </div>
               </div>
             )}
           </div>
@@ -538,7 +577,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
       </GameRoomLayout>
     );
   }
-
   // ─── don't_laugh ──────────────────────────────────────────────────────────────
   if (phase === 'dont_laugh') {
     return (
@@ -672,7 +710,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
               answeringPlayerName={isMyTurn ? partnerName : (isPlayer1 ? p1Name : p2Name)}
               isMyTurnToAnswer={!isMyTurn}
               answer={gameState.currentAnswer}
-              answeredBy={gameState.currentAnswerBy}
+              answeredBy={getPlayerName(gameState.currentAnswerBy)}
               phase={phase}
               roomCode={roomCode}
               deepenQuestion={gameState.deepenQuestionText}
@@ -681,12 +719,34 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
             <PlayerTools
               roomCode={roomCode}
               phase={phase} isMyTurn={isMyTurn} currentAnswer={gameState.currentAnswer}
+              myBomb={isPlayer1 ? (gameState.player1Bomb ?? 1) : (gameState.player2Bomb ?? 1)}
+              mySkip={isPlayer1 ? (gameState.player1Skip ?? 3) : (gameState.player2Skip ?? 3)}
+              myDeepen={isPlayer1 ? (gameState.player1Deepen ?? 2) : (gameState.player2Deepen ?? 2)}
+              myDontLaugh={isPlayer1 ? (gameState.player1DontLaugh ?? 1) : (gameState.player2DontLaugh ?? 1)}
             />
 
             {phase === 'reaction' && !gameState.reactionDone && !isMyTurn && (
               <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--wof-text-secondary)', fontWeight: 600 }}>
                 في انتظار {partnerName} يرد…
               </p>
+            )}
+
+            {/* FIX #6: إشعار واضح لمن ردّ — الإيموجي + اسم كبير للطرفين */}
+            {phase === 'reaction' && gameState.reactionDone && gameState.lastReactionEmoji && (
+              <div className="wof-animate-in" style={{
+                background: 'white',
+                border: '2px solid var(--wof-secondary)',
+                borderRadius: 20, padding: '14px 20px',
+                textAlign: 'center', animation: 'phase-slide-in 300ms ease both',
+              }}>
+                <div style={{ fontSize: 40, lineHeight: 1.2 }}>{gameState.lastReactionEmoji}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--wof-primary)', marginTop: 2 }}>
+                  {getPlayerName(gameState.lastReactionBy)} ردّ!
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--wof-text-secondary)', marginTop: 2 }}>
+                  {getPlayerName(gameState.lastReactionBy)} عبّر عن إعجابه بالإجابة
+                </div>
+              </div>
             )}
 
             {phase === 'reaction' && gameState.reactionDone && isMyTurn && (
