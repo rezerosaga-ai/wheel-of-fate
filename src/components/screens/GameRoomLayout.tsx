@@ -42,9 +42,25 @@ export const PhaseScreen = React.memo(({ phaseKey, children }: { phaseKey: strin
 PhaseScreen.displayName = 'PhaseScreen';
 
 // ─── Bottom Chat Bar ──────────────────────────────────────────────────────────────
+// FIX #7: الشارة إشعار مؤقت — تظهر عند وصول رسالة جديدة وتختفي تلقائياً بعد 8 ثوانٍ أو عند فتح الدردشة
 export function BottomBar({
   chatOpen, setChatOpen, unread,
 }: { chatOpen: boolean; setChatOpen: (o: boolean) => void; unread: number }) {
+  const [badgeVisible, setBadgeVisible] = React.useState(true);
+  const prevUnreadRef = React.useRef(unread);
+  // تظهر الشارة فقط عند تغير unread (رسالة جديدة) — ليست عداداً دائماً
+  React.useEffect(() => {
+    if (unread !== prevUnreadRef.current && unread > 0) {
+      setBadgeVisible(true);
+    }
+    prevUnreadRef.current = unread;
+  }, [unread]);
+  // إخفاء تلقائي بعد 8 ثوانٍ من وصول الإشعار
+  React.useEffect(() => {
+    if (!badgeVisible || unread === 0 || chatOpen) return;
+    const t = setTimeout(() => setBadgeVisible(false), 8000);
+    return () => clearTimeout(t);
+  }, [badgeVisible, unread, chatOpen]);
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -74,7 +90,7 @@ export function BottomBar({
         }}
       >
         💬 الدردشة
-        {unread > 0 && !chatOpen && (
+        {unread > 0 && !chatOpen && badgeVisible && (
           <span style={{
             background: 'var(--wof-accent)', color: 'white',
             borderRadius: '50%', width: 18, height: 18,
