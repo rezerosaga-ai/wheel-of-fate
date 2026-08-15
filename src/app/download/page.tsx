@@ -100,29 +100,29 @@ export default function DownloadPage() {
           ))}
         </div>
 
-        {/* Main Download Button */}
-        <a
-          href="/wheel-of-fate.apk"
-          download="عجلة-الحظ.apk"
+        {/* Main Download Button — temporarily disabled until the APK is re-tested on the stable baseline (per maintenance rule) */}
+        <button
+          disabled
           className="dl-btn"
+          aria-disabled="true"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             gap: 12, width: '100%',
-            background: 'linear-gradient(135deg, #E88FA0, #d4718b)',
-            color: 'white', textDecoration: 'none',
+            background: 'rgba(255,255,255,0.15)',
+            color: 'rgba(255,255,255,0.7)', textDecoration: 'none',
             borderRadius: 20, padding: '18px 28px',
             fontSize: 18, fontWeight: 800,
-            boxShadow: '0 6px 30px rgba(232,143,160,0.45)',
+            cursor: 'not-allowed',
+            border: '1px dashed rgba(255,255,255,0.35)',
             transition: 'all 200ms ease',
-            animation: 'pulse-ring 2.5s ease-in-out infinite',
           }}
         >
-          <span style={{ fontSize: 26 }}>⬇️</span>
+          <span style={{ fontSize: 26 }}>🛠️</span>
           <div style={{ textAlign: 'right' }}>
-            <div>تحميل التطبيق</div>
-            <div style={{ fontSize: 12, fontWeight: 500, opacity: 0.85 }}>Android APK · {apkSize} · v{version}</div>
+            <div>التحميل متوقف مؤقتًا</div>
+            <div style={{ fontSize: 12, fontWeight: 500, opacity: 0.85 }}>Android APK · قيد إعادة الاختبار على النسخة المستقرة</div>
           </div>
-        </a>
+        </button>
 
         {/* Instructions */}
         <div style={{
@@ -135,12 +135,10 @@ export default function DownloadPage() {
             📋 خطوات التثبيت
           </div>
           {[
-            { n: '1', text: 'اضغط "تحميل التطبيق" أعلاه' },
-            { n: '2', text: 'افتح ملف APK بعد التحميل' },
-            { n: '3', text: 'إذا ظهر تحذير → اضغط "تثبيت على أي حال"' },
-            { n: '4', text: 'افتح التطبيق واستمتعوا معاً 💕' },
+            { n: '⚠️', text: 'التحميل متوقف مؤقتًا لحين اكتمال اختبار النسخة الجديدة على النسخة المستقرة' },
+            { n: '✅', text: 'يمكنك اللعب مباشرة من المتصفح بدون تثبيت — الرابط في الأسفل' },
           ].map(({ n, text }) => (
-            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: n === '4' ? 0 : 10 }}>
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: n === '✅' ? 0 : 10 }}>
               <div style={{
                 minWidth: 26, height: 26, borderRadius: '50%',
                 background: 'linear-gradient(135deg,#E88FA0,#A4C8E8)',
