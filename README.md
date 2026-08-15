@@ -1,315 +1,130 @@
 # 🎡 Wheel of Fate — عجلة الحظ
-> **للوكيل الذكي:** اقرأ هذا الملف كاملاً قبل أي تعديل. يحتوي على كل ما تحتاجه لاستئناف البناء بدون شرح إضافي.
 
 لعبة علاقة تفاعلية لشخصين بالوقت الفعلي، عربية RTL كاملة، مبنية بـ Next.js 15 + PostgreSQL.
 
 ---
 
-## 🔗 روابط المشروع
+## 🔗 روابط مباشرة
 
-| الرابط | الوصف |
-|--------|-------|
-| **Production** | `https://wheel-of-fate-three.vercel.app` |
-| **GitHub** | `https://github.com/rezerosaga/wheel-of-fate` |
-| **Vercel Dashboard** | `https://vercel.com/wheel2/wheel-of-fate` |
-| **Dev Server** | `http://localhost:13000` (port ثابت) |
-
-### 📥 رابط تحميل التطبيق .APK
-
-| الرابط | الوصف |
-|--------|-------|
-| **صفحة التحميل** | `https://wheel-of-fate-three.vercel.app/download` |
-| **APK مباشر** | `https://wheel-of-fate-three.vercel.app/wheel-of-fate.apk` |
-
-> ملف APK حجمه ~1.2 MB — يعمل على Android مباشرة بدون Google Play.
-> لتحديث الـ APK: استبدل ملف `public/wheel-of-fate.apk` وادفع للـ `main`.
+| ماذا | الرابط |
+|------|--------|
+| 🌐 **الموقع (Production)** | [wheel-of-fate-three.vercel.app](https://wheel-of-fate-three.vercel.app) |
+| 📥 **صفحة تحميل التطبيق** | [wheel-of-fate-three.vercel.app/download](https://wheel-of-fate-three.vercel.app/download) |
+| 📦 **تحميل APK مباشر** | [wheel-of-fate-three.vercel.app/wheel-of-fate.apk](https://wheel-of-fate-three.vercel.app/wheel-of-fate.apk) |
+| 💻 **مستودع GitHub** | [github.com/rezerosaga-ai/wheel-of-fate](https://github.com/rezerosaga-ai/wheel-of-fate) |
+| ▲ **لوحة Vercel** | [vercel.com/wheel2/wheel-of-fate](https://vercel.com/wheel2/wheel-of-fate) |
 
 ---
 
-## 🛠 البيئة التقنية
+## ⚙️ البيئة التقنية
 
-```
-Framework:     Next.js 15 (App Router, Turbopack)
-Language:      TypeScript (strict, no @ts-ignore allowed)
-Styling:       CSS Variables (globals.css) — NO Tailwind
-Database:      PostgreSQL + Drizzle ORM
-State:         Zustand
-Package Mgr:   pnpm
-Dev Port:      13000
-Deploy:        Vercel (auto-deploy on push to main)
-```
+| التقنية | القيمة |
+|---------|--------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript (strict) |
+| Styling | CSS Variables (globals.css) — بدون Tailwind |
+| Database | PostgreSQL (Neon) + Drizzle ORM |
+| State | Zustand |
+| Realtime | SSE مع polling fallback (3s) |
+| Package Manager | pnpm |
+| Deploy | Vercel — تلقائي عند push إلى main |
 
-### الأوامر الأساسية
+## 🚀 الأوامر الأساسية
+
 ```bash
-pnpm dev          # تشغيل المطور على port 13000
+pnpm dev          # خادم التطوير
 pnpm build        # بناء الإنتاج
-pnpm typecheck    # فحص TypeScript بدون emit
-pnpm test         # تشغيل الاختبارات (vitest)
-
-# في بيئة sandbox:
-supervisorctl restart dev-server   # إعادة تشغيل الخادم
-```
-
-### متغيرات البيئة المطلوبة
-```env
-DATABASE_URL=postgresql://...        # Neon PostgreSQL
-OPENAI_API_KEY=sk-...               # اختياري — للتحليل الذكي
-```
-**ملاحظة:** هذه المتغيرات موجودة في `.env.local` (مستثنى من git) وفي Vercel Dashboard → Settings → Environment Variables.
-
----
-
-## 📁 هيكل الملفات المهم
-
-```
-src/
-├── app/
-│   ├── page.tsx              ← نقطة الدخول — يحتوي AgeGate
-│   ├── layout.tsx            ← RTL، Cairo font، PWA manifest
-│   ├── globals.css           ← كل CSS Variables + kawaii design tokens
-│   ├── privacy/page.tsx      ← صفحة سياسة الخصوصية (مطلوبة لـ Google Play)
-│   ├── terms/page.tsx        ← صفحة شروط الاستخدام (مطلوبة لـ Google Play)
-│   └── api/room/[code]/
-│       ├── action/route.ts   ← تنفيذ الأفعال (spin, answer, skip...)
-│       ├── chat/route.ts     ← الدردشة (حد 1000 حرف)
-│       ├── reflect/route.ts  ← حفظ التأملات + AI analysis
-│       └── state/route.ts    ← polling حالة اللعبة
-│
-├── components/
-│   ├── AgeGate.tsx           ← تحقق العمر (17+) — يُعرض مرة واحدة فقط
-│   ├── screens/
-│   │   ├── HomeScreen.tsx    ← الرئيسية + Onboarding mood + Streak
-│   │   ├── GameRoom.tsx      ← الغرفة الرئيسية (كل مراحل اللعبة)
-│   │   ├── SessionEnd.tsx    ← نهاية الجلسة + Share + Achievements
-│   │   └── WaitingRoom.tsx   ← انتظار اللاعب الثاني
-│   └── game/
-│       ├── SpinWheel.tsx     ← عجلة Canvas (quintic+elastic, HiDPI, particles)
-│       ├── ChatPanel.tsx     ← دردشة glassmorphism
-│       ├── QuestionCard.tsx
-│       ├── ChallengeCard.tsx
-│       ├── FateCard.tsx
-│       ├── KnowMe.tsx
-│       ├── PlayerTools.tsx   ← bomb/skip/deepen/dontlaugh
-│       └── ScoreBar.tsx
-│
-├── lib/
-│   ├── game-logic.ts         ← آلة الحالة الخادمية (state machine)
-│   ├── questions.ts          ← 405 سؤال عربي، 8 تصنيفات
-│   ├── sounds.ts             ← Web Audio API engine
-│   ├── player-stats.ts       ← Streak + 7 Achievements (localStorage)
-│   ├── api.ts                ← client API wrapper
-│   └── llm.ts                ← LLM integration
-│
-├── db/schema.ts              ← Drizzle ORM schema
-├── store/useGameStore.ts     ← Zustand global store
-│
-└── tests/
-    ├── unit/                 ← 83 اختبار (vitest)
-    ├── integration/          ← 23 اختبار
-    ├── load/                 ← 5 اختبارات حمل
-    └── uat/                  ← 32 اختبار قبول
+pnpm typecheck    # فحص TypeScript
+pnpm test         # الاختبارات (vitest)
 ```
 
 ---
 
-## 🗄 قاعدة البيانات (Drizzle Schema)
+## 🎮 دورة اللعبة
 
-```sql
-wof_rooms              — الغرف (code, player1_id, player2_id, status)
-wof_game_states        — حالة اللعبة الحية (phase, scores, current_question...)
-wof_chat_messages      — رسائل الدردشة (max 1000 chars)
-wof_reflections        — تأملات بعد الجلسة
-wof_topics             — الموضوعات
-wof_conflict_sessions  — جلسات النزاع
+```
+waiting → (انضمام اللاعب الثاني) → spin_start → spin_category (عجلة الفئات)
+→ spin_question (عجلة الأسئلة) → question → reaction → round_end
+→ next_round → spin_category → ... → session_end
 ```
 
-**تحذير:** لا تعدّل الـ schema بدون migration. استخدم `pnpm drizzle-kit generate` ثم `pnpm drizzle-kit push`.
+**أدوات اللاعبين:** 💣 قنبلة · ⏭️ تخطّي · 🔍 تعمّق · 😂 لا تضحك · 💌 رسالة سرية
+
+**التحدي (Challenge):** بعد مرحلة reaction يمكن لأحد اللاعبين إصدار تحدٍّ، والآخر يجيب عبر `challenge_answer`.
 
 ---
 
-## 🎮 منطق اللعبة (Game Flow)
+## 📂 بنية المشروع
 
-```
-lobby → spinning → question → answering → round_end → [repeat] → game_over
-```
-
-- اللاعب يدور العجلة → تختار سؤالاً عشوائياً من التصنيف
-- كلا اللاعبَين يجيبان → يصوّت كل منهما على إجابة الآخر
-- النقاط تُحسب → round_end يعرض النتيجة → جولة جديدة
-- بعد N جولات → game_over → SessionEnd
-
-**الـ Polling:** كل 1.5 ثانية `GET /api/room/[code]/state`
-
----
-
-## 📊 حالة المشروع
-
-### ✅ مكتمل (المرحلة 0 + المرحلة 1 جزئياً)
-- [x] العجلة Canvas + فيزياء + أصوات Web Audio
-- [x] Multiplayer polling real-time
-- [x] 405 سؤال عربي 8 تصنيفات
-- [x] Mini-games: know_me, challenge, fate_card
-- [x] AI reflection analysis
-- [x] Onboarding mood selector (6 أمزجة)
-- [x] Streak يومي + 7 Achievements (localStorage)
-- [x] Share النتيجة (Web Share API + clipboard)
-- [x] **Privacy Policy** صفحة `/privacy`
-- [x] **Terms of Service** صفحة `/terms`
-- [x] **Age Gate** تحقق 17+ عند أول دخول
-- [x] **manifest.json** محدَّث للـ TWA
-- [x] **assetlinks.json** جاهز في `/.well-known/`
-- [x] اختبارات: 83 unit + 23 integration + 5 load + 32 UAT
+| المسار | الوصف |
+|--------|-------|
+| `src/components/screens/` | الشاشات: GameRoom، GameRoomLayout (مستخرج لمنع الفليكر)، SessionEnd، HomeScreen |
+| `src/components/game/` | SpinWheel (Canvas)، ChatPanel، QuestionCard، ChallengeCard، FateCard، KnowMe، PlayerTools |
+| `src/hooks/` | useRoomSSE (sync + polling fallback)، usePushNotification |
+| `src/lib/` | game-logic.ts (آلة الحالة)، questions.ts (11 فئة)، sounds.ts، api.ts |
+| `src/app/api/room/` | endpoints: create، join، [code]/{action، state، chat، stream، reflect} |
+| `src/db/` | Drizzle schema + client |
+| `src/tests/` | unit (83)، integration، load، uat |
 
 ---
 
-## 🗺 خارطة الطريق للـ Google Play
+## 🗄 قاعدة البيانات
 
-### المرحلة 1 — الحد الأدنى للنشر ✅ مكتملة بالكامل
-```
-✅ Privacy Policy (/privacy)
-✅ Terms of Service (/terms)
-✅ Age Gate (17+) — يُخزن في localStorage
-✅ manifest.json محدَّث (TWA-ready) — Score: 29/45
-✅ Service Worker (sw.js) — cache-first + offline fallback
-✅ 8 أيقونات PNG (72→512px) + screenshot PWA
-✅ assetlinks.json بالـ SHA256 الحقيقي
-✅ APK + AAB جاهزان للرفع على Google Play
-✅ اختبار على 3 أجهزة أندرويد ← الخطوة التالية اليدوية
-```
-
-### 📦 بيانات الـ APK المولَّد (احفظها بأمان)
+PostgreSQL على Neon — الجداول الرئيسية:
 
 ```
-Package Name:    app.vercel.wheel_of_fate_three.twa
-PWA Score:       29/45 Manifest + 4 Service Worker + 1 Capabilities
-
-Keystore:        signing.keystore (في ZIP المُنزَّل من PWABuilder)
-Key Alias:       my-key-alias
-Store Password:  [محفوظة في ZIP — لا تشاركها]
-Key Password:    [محفوظة في ZIP — لا تشاركها]
-
-SHA256:          5E:F4:B5:82:4F:AB:29:24:8C:86:48:B9:50:C0:D7:CF:
-                 3B:29:0F:FF:9F:1D:94:48:5A:1D:0B:73:DB:B0:BC:A4
+wof_rooms            — الغرف (code, player1/2, status)
+wof_game_states      — حالة اللعبة الحية (phase, scores, question...)
+wof_chat_messages    — الدردشة (حد 1000 حرف)
+wof_reflections      — تأملات ما بعد الجلسة
 ```
 
-**⚠️ مهم جداً:** احتفظ بملف `signing.keystore` في مكان آمن — بدونه لا تستطيع تحديث التطبيق على Google Play أبداً.
-
-### خطوات رفع APK على Google Play (يدوية)
-1. افتح https://play.google.com/console
-2. أنشئ تطبيق جديد → اختر "App" و"Free"
-3. في **App content**: أضف Content Rating → اختر "Mature 17+"
-4. في **App content** → Privacy Policy: أدخل `https://wheel-of-fate-three.vercel.app/privacy`
-5. في **Production** → ارفع `عجلة الحظ.aab` (ليس APK)
-6. أضف وصف التطبيق بالعربية + الصور التوضيحية
-7. Submit for review
+**تحذير:** أي تعديل على schema يحتاج migration عبر `drizzle-kit`.
 
 ---
 
-### المرحلة 2 — استقرار الإنتاج ⏳ لم تبدأ
+## 📱 تطبيق Android (TWA)
 
-**المشاكل الحالية:**
-- الـ Polling (كل 1.5 ثانية) سيُرهق الخادم مع 1000+ مستخدم
-- لا يوجد نظام مصادقة → المستخدم يفقد بياناته عند تغيير الجهاز
-- قاعدة البيانات Neon مجانية → محدودية في الاتصالات المتزامنة
+الـ APK غلاف TWA يفتح الموقع داخل Chrome Custom Tabs:
 
-**المطلوب:**
-```
-□ WebSocket بدل Polling
-  - استبدل useRoomPolling.ts بـ WebSocket hook
-  - استخدم Pusher أو Ably أو socket.io
-
-□ قاعدة بيانات مستقلة
-  - Supabase (يدعم WebSocket natively)
-  - أو PlanetScale (MySQL)
-
-□ نظام مصادقة
-  - Google Auth عبر NextAuth.js
-  - ربط Player ID بـ Google Account
-  - حفظ الإحصاءات في DB بدل localStorage
-```
+| البند | القيمة |
+|-------|--------|
+| الحزمة | `app.vercel.wheel_of_fate_three.twa` |
+| Asset links | [/.well-known/assetlinks.json](https://wheel-of-fate-three.vercel.app/.well-known/assetlinks.json) |
+| SHA-256 | محدث في assetlinks.json |
+| التحديث | استبدل `public/wheel-of-fate.apk` وادفع إلى main |
 
 ---
 
-### المرحلة 3 — نمو حقيقي ⏳ لم تبدأ
-
-```
-□ رفع بنك الأسئلة من 405 → 1000+
-  - الملف: src/lib/questions.ts
-  - التصنيفات الحالية: romantic, deep, fun, bold, future, habits, goals, memories
-  - أضف: conflict_resolution, daily_life, dreams, family
-
-□ نظام إبلاغ عن مشكلة
-  - زر "إبلاغ" على السؤال
-  - POST /api/report { questionId, reason }
-
-□ تحليلات استخدام
-  - Vercel Analytics (مجاني)
-  - أو PostHog (self-hosted)
-
-□ Content moderation للدردشة
-  - فحص الرسائل المسيئة
-  - OpenAI Moderation API (مجاني)
-```
-
----
-
-## 🔒 أمان مهم
-
-- `.env.local` مستثنى من git (DATABASE_URL + OPENAI_API_KEY)
-- رفع token GitHub يدوياً فقط عند الحاجة وإلغاؤه بعد الاستخدام
-- لا توجد كلمات مرور مخزنة (لا نظام auth حالياً)
-- الدردشة محدودة بـ 1000 حرف + rate limit
-
----
-
-## 📱 Google Play — معلومات التطبيق
-
-```
-Package Name:   ai.rezerosaga.wheeloffate
-App Name:       عجلة الحظ (Wheel of Fate)
-Category:       Card Games / Casual
-Content Rating: Mature 17+ (بسبب وضع "الجريئة")
-Target SDK:     34 (Android 14)
-Min SDK:        21 (Android 5.0)
-Languages:      Arabic (primary), could add English later
-```
-
----
-
-## 🐛 مشاكل معروفة
-
-| المشكلة | الخطورة | الحل |
-|---------|---------|------|
-| Polling مكلف مع كثرة المستخدمين | 🔴 حرجة | WebSocket (المرحلة 2) |
-| localStorage يُفقد عند تغيير الجهاز | 🟡 مهمة | Auth + DB sync (المرحلة 2) |
-| assetlinks.json يحتاج SHA256 حقيقي | 🟡 مهمة | بعد توليد keystore |
-| لا content moderation للدردشة | 🟡 مهمة | OpenAI Moderation (المرحلة 3) |
-| 405 سؤال فقط → تكرار بعد 5-6 جلسات | 🟢 مقبول | المرحلة 3 |
-
----
-
-## 🧪 تشغيل الاختبارات
+## 🧪 اختبار الإنتاج السريع
 
 ```bash
-pnpm test                    # كل الاختبارات
-pnpm test src/tests/unit     # unit فقط (83)
-pnpm test src/tests/integration  # integration (23)
-pnpm test src/tests/uat      # UAT (32)
+# إنشاء غرفة
+curl -X POST https://wheel-of-fate-three.vercel.app/api/room/create \
+  -H "Content-Type: application/json" \
+  -d '{"playerId":"p1","playerName":"أحمد"}'
+
+# انضمام اللاعب الثاني (ينتقل تلقائياً إلى spin_start)
+curl -X POST https://wheel-of-fate-three.vercel.app/api/room/join \
+  -H "Content-Type: application/json" \
+  -d '{"code":"XXXXXX","playerId":"p2","playerName":"أنفال"}'
 ```
 
 ---
 
-## 📝 ملاحظات للوكيل المستقبلي
+## 📋 ملاحظات الاستقرار (Stability Notes)
 
-1. **لا تكسر الـ Schema** — أي تعديل على `src/db/schema.ts` يحتاج migration
-2. **الـ CSS system** موجود بالكامل في `globals.css` — لا Tailwind
-3. **آلة الحالة** في `game-logic.ts` هي مصدر الحقيقة الوحيد للعبة
-4. **الأصوات** في `sounds.ts` — Web Audio API (لا ملفات صوت خارجية)
-5. **العجلة** في `SpinWheel.tsx` — Canvas 2D، لا SVG
-6. **الـ dev server** على port 13000 دائماً
-7. **لا تضف** `@ts-ignore` أو `eslint-disable` — اصلح المشكلة بشكل صحيح
+- **الفليكر:** `GameRoomLayout` مستخرج خارج `GameRoom` لمنع إعادة بناء DOM مع كل polling
+- **الـ sync:** `useRoomSSE` يحتوي polling fallback كل 3 ثوانٍ عند انقطاع SSE
+- **Aliases:** actions مثل `spin` / `pick_question` / `answer` / `react_*` تُحوَّل داخلياً في `game-logic.ts`
+- **challenge_answer:** يحفظ الإجابة في DB دائماً (تم إصلاحه)
+- **الأسماء:** تُعرض أسماء اللاعبين بدلاً من Raw IDs (p_123...)
+- **العجلات:** `spin` من spin_start يختار الفئة فوراً، و`pick_question` يختار السؤال — كل ذلك في خطوة واحدة على الخادم
 
 ---
 
-Based on [2D Phaser + Next.js Game Template] by [HappySeeds].  
-Create with HappySeeds: https://happyseeds.ai
+## 🔒 أمان
+
+- `.env.local` مستثنى من git (DATABASE_URL, NEXTAUTH_*, GOOGLE_*)
+- الدردشة محدودة بـ 1000 حرف مع rate limit
+- Age Gate (17+) + صفحات Privacy / Terms إلزامية
