@@ -65,6 +65,8 @@ export const gameState = pgTable('wof_game_state', {
   currentAnswer: text('current_answer'),
   currentAnswerBy: text('current_answer_by'), // playerId
   reactionDone: boolean('reaction_done').notNull().default(false),
+  lastReactionBy: text('last_reaction_by'), // playerId who reacted (FIX #6: clear reaction visibility)
+  lastReactionEmoji: text('last_reaction_emoji'), // ❤️😂🧠🥹🔥⭐
 
   // Scores
   player1Score: integer('player1_score').notNull().default(0),
