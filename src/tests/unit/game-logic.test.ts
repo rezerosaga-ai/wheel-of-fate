@@ -31,6 +31,8 @@ function makeState(overrides: Partial<GameStateData> = {}): GameStateData {
     currentAnswer: null,
     currentAnswerBy: null,
     reactionDone: false,
+    lastReactionBy: null,
+    lastReactionEmoji: null,
     player1Score: 0,
     player2Score: 0,
     loveCounter: 0,
