@@ -1,0 +1,39 @@
+# Sentry → GitHub Issue Sync
+# يراقب أخطاء Sentry عبر API: عند تكرار أي Issue أكثر من حد التنبيه (افتراضي 10)
+# ينشئ GitHub Issue تلقائيًا بالتفاصيل الكاملة (العنوان، الرابط، التكرارات، الرابط المباشر للوحة).
+#
+# يتطلب secret: SENTRY_AUTH_TOKEN (org-level token بقراءة المشروع)
+# يضبط تلقائيًا: org=wheel-of-fate, project=wheel-of-fate
+#
+# التشغيل:
+# - بشكل دوري كل ساعة (cron: 0 * * * *) — معدل استهلاك API منخفض جدًا (~2 طلب/ساعة)
+# - يدويًا عند الحاجة (workflow_dispatch)
+name: Sentry → GitHub Issue Sync
+
+on:
+  schedule:
+    - cron: "0 * * * *"          # كل ساعة
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "dry-run: عرض أي Issues ستنشأ دون إنشائها فعليًا"
+        required: false
+        default: "false"
+
+env:
+  SENTRY_ORG: wheel-of-fate
+  SENTRY_PROJECT: wheel-of-fate
+  ALERT_THRESHOLD: 10            # يُنشأ Issue على GitHub عند تكرار خطأ أكثر من هذا العدد
+
+jobs:
+  sync:
+    name: Sentry issue sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync Sentry issues to GitHub Issues
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python3 .github/scripts/sentry_issue_sync.py
