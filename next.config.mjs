@@ -2,6 +2,7 @@
 const nextConfig = {
   // Add any specific nextjs config here if needed
   reactStrictMode: false, // Often better for games during development
+  instrumentationHook: true, // Sentry client-side registration (instrumentation-client.ts)
   transpilePackages: ['phaser'],
   allowedDevOrigins: ['**.*.*'],
   env: {
