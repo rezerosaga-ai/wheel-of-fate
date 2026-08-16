@@ -151,6 +151,8 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   const [showDontLaugh, setShowDontLaugh] = useState(false);
   const [dontLaughSeconds, setDontLaughSeconds] = useState(30);
   const dontLaughTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // B-FIX (TS2448): phase كان معرّفًا س354 متأخرًا عن استخدامه في roundEndTimerRef useEffect (TDZ crash في round_end) — يعرّف الآن في أعلى المكوّن
+  const phase = gameState?.phase ?? 'waiting';
 
   const [wheelSize, setWheelSize] = useState(280);
   useEffect(() => {
@@ -351,7 +353,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   const p1Name     = room.player1Name ?? 'لاعب 1';
   const p2Name     = room.player2Name ?? 'لاعب 2';
   const partnerName= isPlayer1 ? p2Name : p1Name;
-  const phase      = gameState.phase;
 
   // FIX #1: تحويل playerId (p_17...) إلى اسم اللاعب الحقيقي في كل مواضع العرض
   const getPlayerName = useCallback((pid: string | null | undefined): string => {

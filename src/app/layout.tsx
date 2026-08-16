@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next';
-import { Analytics } from '@vercel/analytics/next';
-import { SessionProvider } from 'next-auth/react';
+import Providers from '@/components/Providers';
+import AnalyticsClient from '@/components/AnalyticsClient';
 import './globals.css';
+import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: 'Wheel of Fate 🎡❤️ — عبدو × أنفال',
@@ -33,7 +34,12 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+
+// FIX: fetch the session server-side and pass it to SessionProvider — the
+// client-side session fetch inside next-auth crashes static prerendering of
+// the builtin error pages ("Cannot read properties of null (reading 'useState')").
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
   return (
     <html lang="ar" dir="rtl">
       <head>
@@ -56,10 +62,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
       </head>
       <body>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
-        <Analytics />
+        <Providers session={session}>{children}</Providers>
+        <AnalyticsClient />
         {/* Register Service Worker */}
         <script
           dangerouslySetInnerHTML={{

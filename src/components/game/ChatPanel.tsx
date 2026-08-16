@@ -43,12 +43,21 @@ export default function ChatPanel({ roomCode, isOpen, onClose }: ChatPanelProps)
     }
   }, [isOpen]);
 
+  // B-FIX: لا نجاح صامت — خطأ الإرسال يُعرض صراحة داخل اللوحة (UX-BH03)
+  const [sendError, setSendError] = useState<string | null>(null);
   const send = useCallback(async (content = text) => {
     const trimmed = content.trim();
     if (!trimmed || !player || sending) return;
     setSending(true);
-    await api.sendChat(roomCode, player.id, player.name, trimmed);
+    setSendError(null);
+    const res = await api.sendChat(roomCode, player.id, player.name, trimmed);
     setSending(false);
+    if (res.error) {
+      setSendError(res.error);
+      // إخفاء التنبيه بعد 4 ثوانٍ
+      setTimeout(() => setSendError((e) => (e === res.error ? null : e)), 4000);
+      return;
+    }
     setText('');
   }, [text, player, sending, roomCode]);
 
@@ -211,6 +220,21 @@ export default function ChatPanel({ roomCode, isOpen, onClose }: ChatPanelProps)
 
         <div ref={bottomRef} />
       </div>
+
+      {/* ── Send error banner (B-FIX: no silent failures) ─────────────────────── */}
+      {sendError && (
+        <div
+          style={{
+            background: '#FDECEC', color: '#C0392B',
+            padding: '8px 16px', fontSize: 13, fontWeight: 700,
+            borderBottom: '1px solid rgba(192,57,43,0.2)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            animation: 'wof-bounce-in 300ms ease both',
+          }}
+        >
+          ⚠️ لم تصل الرسالة: {sendError} — جرّب مرة أخرى.
+        </div>
+      )}
 
       {/* ── Quick emoji bar ───────────────────────────────────────────────────── */}
       <div
