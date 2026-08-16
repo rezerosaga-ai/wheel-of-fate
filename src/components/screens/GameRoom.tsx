@@ -15,6 +15,7 @@ import KnowMe from '@/components/game/KnowMe';
 import ChallengeCard from '@/components/game/ChallengeCard';
 import SessionEnd from '@/components/screens/SessionEnd';
 import { GameRoomLayout, PhaseScreen, type FloatPoint } from '@/components/screens/GameRoomLayout';
+import WaitingRoom from '@/components/screens/WaitingRoom';
 
 const CATEGORY_EMOJI: Record<string, string> = {
   love:             '❤️',
@@ -389,7 +390,13 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     );
   }
 
-  if (phase === 'waiting') return null;
+  // S3-01 FIX (Sentry WHEEL-OF-FATE-3): conditional early return AFTER hooks
+  // caused "Rendered more hooks than during the previous render" when polling
+  // caught phase='waiting' mid-transition (race). Rendering WaitingRoom keeps the
+  // hook count identical across renders instead of skipping them.
+  if (phase === 'waiting') {
+    return <WaitingRoom roomCode={roomCode} />;
+  }
 
   // ─── spin_start ───────────────────────────────────────────────────────────────
   if (phase === 'spin_start') {

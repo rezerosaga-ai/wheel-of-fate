@@ -84,7 +84,7 @@ describe('UAT-2: تدفق إنشاء الغرف والانضمام', () => {
       const code = r.body.code as string;
       expect(code).not.toMatch(/[ILO01]/);
     }
-  });
+  }, 15000); // network-bound: 10 sequential creates
 
   it('✅ اللاعب الثاني يستطيع الانضمام بالرمز', async () => {
     const p1 = uid(); const p2 = uid();
