@@ -741,6 +741,7 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
               askingPlayerName={isMyTurn ? (isPlayer1 ? p1Name : p2Name) : partnerName}
               answeringPlayerName={isMyTurn ? partnerName : (isPlayer1 ? p1Name : p2Name)}
               isMyTurnToAnswer={!isMyTurn}
+              showAnswer={phase !== 'reaction'}
               answer={gameState.currentAnswer}
               answeredBy={getPlayerName(gameState.currentAnswerBy)}
               phase={phase}
@@ -748,6 +749,15 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
               deepenQuestion={gameState.deepenQuestionText}
             />
 
+            {/* UX-010: Answer reveal moment — a dramatic one-time reveal card when a
+                 new answer arrives, before the reaction tools/rating UI take over. */}
+            {phase === 'reaction' && gameState.currentAnswer && (
+              <AnswerReveal
+                answer={gameState.currentAnswer}
+                answeredByName={getPlayerName(gameState.currentAnswerBy)}
+                isMyAnswer={gameState.currentAnswerBy === player?.id}
+              />
+            )}
             <PlayerTools
               roomCode={roomCode}
               phase={phase} isMyTurn={isMyTurn} currentAnswer={gameState.currentAnswer}
@@ -809,6 +819,65 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
         </PhaseScreen>
       )}
     </GameRoomLayout>
+  );
+}
+
+// ─── Answer Reveal (UX-010) ─────────────────────────────────────────────────────
+// A dramatic one-time reveal moment when a new answer arrives during the
+// reaction phase. Owns the stage for ~1.8s, then steps aside for the
+// reaction tools. Remembered per answer so re-renders don't re-trigger it.
+function AnswerReveal({
+  answer,
+  answeredByName,
+  isMyAnswer,
+}: {
+  answer: string;
+  answeredByName: string | null;
+  isMyAnswer: boolean;
+}) {
+  const [visible, setVisible] = React.useState(true);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setVisible(false), 1800);
+    return () => clearTimeout(t);
+  }, [answer]);
+
+  return (
+    <div
+      className="wof-animate-in"
+      style={{
+        background: 'linear-gradient(135deg, #FFF6F8 0%, #FFFFFF 100%)',
+        border: '2px solid var(--wof-secondary)',
+        borderRadius: 24,
+        padding: '24px 22px',
+        marginBottom: 14,
+        textAlign: 'center',
+        boxShadow: '0 10px 30px rgba(217,108,131,0.16)',
+        animation: 'phase-slide-in 300ms ease both, wof-pop 400ms cubic-bezier(0.23,1,0.32,1) both',
+        opacity: visible ? 1 : 0,
+        transform: visible ? undefined : 'scale(0.95)',
+        transition: 'opacity 400ms ease, transform 400ms ease',
+        transitionProperty: 'opacity, transform',
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--wof-primary)', marginBottom: 10 }}>
+        {isMyAnswer ? '✨ أجبت بـ:' : `💬 ${answeredByName ?? 'الطرف الآخر'} أجاب:`}
+      </div>
+      <p
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          lineHeight: 1.75,
+          color: 'var(--wof-text)',
+          margin: 0,
+        }}
+      >
+        {answer}
+      </p>
+      <div style={{ fontSize: 12, color: 'var(--wof-text-secondary)', marginTop: 10 }}>
+        {isMyAnswer ? 'الآن دور الطرف الآخر للرد…' : 'ردّ عليها بإيموجي! 🎯'}
+      </div>
+    </div>
   );
 }
 

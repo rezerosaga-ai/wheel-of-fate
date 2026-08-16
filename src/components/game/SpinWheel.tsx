@@ -153,10 +153,13 @@ export default function SpinWheel({
     ctx.stroke();
 
     // ── Slices ─────────────────────────────────────────────────────────────────
+    // UX-V02: RTL layout — categories advance counter-clockwise around the wheel
+    // (first category sits just left of the needle, then the next CCW). Canvas arc()
+    // with endA < startA draws counter-clockwise, matching sectorAtAngle math.
     WHEEL_CATEGORIES.forEach((cat, i) => {
-      const startA = angle + i * sliceAngle - Math.PI / 2;
-      const endA   = startA + sliceAngle;
-      const midA   = startA + sliceAngle / 2;
+      const startA = angle - Math.PI / 2 - i * sliceAngle;
+      const endA   = startA - sliceAngle;
+      const midA   = startA - sliceAngle / 2;
 
       ctx.beginPath();
       ctx.moveTo(cx, cy);

@@ -31,6 +31,8 @@ interface QuestionCardProps {
   askingPlayerName: string;
   answeringPlayerName: string;
   isMyTurnToAnswer: boolean;
+  // UX-010: when false the dramatic AnswerReveal owns the answer (reaction phase)
+  showAnswer?: boolean;
   answer: string | null;
   answeredBy: string | null;
   phase: string;
@@ -65,6 +67,7 @@ export default function QuestionCard({
   categoryEmoji,
   answeringPlayerName,
   isMyTurnToAnswer,
+  showAnswer = true,
   answer,
   answeredBy,
   phase,
@@ -249,8 +252,8 @@ export default function QuestionCard({
         </div>
       )}
 
-      {/* Show answer */}
-      {answer && (
+      {/* Show answer (hidden during the dramatic reveal moment — UX-010) */}
+      {answer && showAnswer && (
         <div className="wof-animate-in">
           <div
             className="wof-card"

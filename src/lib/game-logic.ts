@@ -545,11 +545,12 @@ export function processAction(
       const bombKey = actorIdx === 0 ? 'player1Bomb' : 'player2Bomb';
       const bombCount = (state[bombKey as keyof GameStateData] as number) ?? 0;
       if (bombCount <= 0) return { updates: {}, error: 'لا تملك قنابل متبقية' };
-      // Bomb: redirect the question to the asker — they must now answer.
+      // Bomb: redirect the question to the OTHER player (the asker) — they must now answer.
+      // bombRedirect = idx of the player who MUST ANSWER after the bomb (= the asker).
       return {
         updates: {
           [bombKey]: bombCount - 1,
-          bombRedirect: actorIdx, // the asker (askerIdx) must answer
+          bombRedirect: (actorIdx === 0 ? 1 : 0) as 0 | 1,
           updatedAt: now,
         } as Partial<GameStateData>,
         message: 'bomb',
