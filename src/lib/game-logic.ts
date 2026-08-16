@@ -252,10 +252,35 @@ export function processAction(
     return { updates: {} };
   }
   if (action.type === 'pick_question') {
-    // Two/three sub-steps (full alias: spin + both ACKs): if at spin_category, resolve the category spin first,
-    // then auto-apply the category (ACK), then spin_question, then auto-ack to phase question.
+    // Two/three sub-steps (full alias: spin + both ACKs):
+    // From spin_category: resolve the category spin, auto-apply the category (ACK), then spin_question, then auto-ack to question.
+    // From spin_question with no pending (auto-ack already consumed it): resolve the question spin inline and auto-ack
+    // to question — prevents a silent dead-end freeze (Repair Lab: explicit failure path).
     let workState = state;
     let merged: Record<string, unknown> = {};
+    if (state.phase === 'spin_question' && !state.pendingSpinResult) {
+      const qResult = processAction({ type: 'spin_question', playerId: action.playerId }, state, room);
+      if (Object.keys(qResult.updates).length === 0) return qResult;
+      const sp = JSON.parse(
+        (qResult.updates.pendingSpinResult as string | undefined) ?? state.pendingSpinResult ?? '{}'
+      ) as SpinResult;
+      const qId = parseInt(sp.value, 10);
+      const usedIds = [...(state.usedQuestionIds ?? []), qId];
+      return {
+        updates: {
+          ...qResult.updates,
+          phase: 'question',
+          currentQuestionId: qId,
+          currentAnswer: null,
+          currentAnswerBy: null,
+          reactionDone: false,
+          deepenQuestionText: null,
+          pendingSpinResult: null,
+          usedQuestionIds: usedIds,
+          updatedAt: new Date(),
+        },
+      };
+    }
     if (state.phase === 'spin_category') {
       const catResult = processAction({ type: 'spin_category', playerId: action.playerId }, state, room);
       if (Object.keys(catResult.updates).length === 0) return catResult;
@@ -534,9 +559,10 @@ export function processAction(
     }
 
     case 'spin_question_ack': {
-      // A2 FIX (REPAIR_PLAN): guard ضد ACK المكرر — نفس مبدأ spin_category_ack.
-      if (state.phase !== 'spin_question') return { updates: {} };
-      if (!state.pendingSpinResult) return { updates: {} };
+      // A2 FIX (REPAIR_PLAN): guard ضد ACK المكرر — same as spin_category_ack.
+      // Idempotent: المكرر يُقبل بصمت مع رسالة واضحة بدل silent {} — الواجهة تعرف رفضت أم لا.
+      if (state.phase !== 'spin_question') return { updates: {}, error: 'الـ ACK وصل في طور غير صحيح' };
+      if (!state.pendingSpinResult) return { updates: {}, error: 'الـ ACK لم يعد صالحًا — السؤال اختير فعلًا' };
       const sp = JSON.parse(state.pendingSpinResult) as SpinResult;
       const qId = parseInt(sp.value, 10);
       const usedIds = [...(state.usedQuestionIds ?? []), qId];
@@ -586,9 +612,11 @@ export function processAction(
 
     case 'submit_reaction': {
       const sr = action as Extract<GameAction, { type: 'submit_reaction' }>;
-      if (state.phase !== 'reaction') return { updates: {} };
+      // Explicit explicit rejection — الواجهة تعرض رسالة بدل silent {} في طور التقييم (BUG-003).
+      if (state.phase !== 'reaction') return { updates: {}, error: 'التقييم غير متاح حاليًا — لا يوجد إجابة لتقييمها' };
       // A2 FIX: guard reaction مزدوج — النقرة المكررة لا تعطي نقاطًا إضافية (idempotent)
-      if (state.reactionDone) return { updates: {} };
+      // Idempotent explicit: تُقبل بلا أثر مع رسالة واضحة للواجهة (بدل silent {}).
+      if (state.reactionDone) return { updates: {}, error: 'التقييم سُجِّل من قبل — لا نقاط إضافية' };
 
       // The asker (currentPlayer) rates the answerer's response
       // The answerer is identified by currentAnswerBy

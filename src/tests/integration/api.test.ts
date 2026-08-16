@@ -161,50 +161,64 @@ describe('POST /api/room/[code]/action', () => {
     expect(gs?.currentCategory).toBeTruthy();
   });
 
-  it('جولة كاملة: سؤال ← إجابة ← تقييم ← نقاط ← نهاية جولة', { timeout: 20000 }, async () => {
-    // المرحلة الحالية spin_question (من الاختبار السابق) مع pendingSpinResult — نكمل للسؤال.
-    // المرحلة الحالية spin_question (من الاختبار السابق) — عجلة السؤال قد تكون مع نتيجة معلقة أو فارغة.
-    const gs1 = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
-    let gs: Record<string, unknown> = {};
-    if (gs1?.phase === 'spin_question') {
-      if (gs1?.pendingSpinResult as string | null) {
-        const r0 = await post(`/api/room/${code}/action`, { type: 'spin_question_ack', playerId: p1 });
-        expect(r0.status).toBe(200);
-      } else {
-        // عجلة الأسئلة: نختار سؤالًا ثم نؤكّد (isCurrentPlayer مطلوب — نقرأه)
-        const actor = ((gs1?.currentPlayerIdx as number) ?? 0) === 0 ? p1 : p2;
-        const r0 = await post(`/api/room/${code}/action`, { type: 'spin', playerId: actor });
-        expect(r0.status).toBe(200);
-        const r1 = await post(`/api/room/${code}/action`, { type: 'spin_question_ack', playerId: actor });
-        expect(r1.status).toBe(200);
-      }
-    }
-    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
-    // السؤال نشط: السائل هو currentPlayerIdx والمجيب هو الآخر
-    expect(gs?.phase).toBe('question');
+          it('جولة كاملة: سؤال ← إجابة ← تقييم ← نقاط ← نهاية جولة', { timeout: 30000 }, async () => {
+    // غرفة مستقلة تمامًا — لا تعتمد على ترتيب الاختبارات ولا على state تراكمي.
+    const rp1 = uid();
+    const rp2 = uid();
+    const create = await post('/api/room/create', { playerId: rp1, playerName: 'عبدو-جولة' });
+    expect(create.status).toBe(200);
+    const rcode = create.body.code as string;
+    await post('/api/room/join', { code: rcode, playerId: rp2, playerName: 'أنفال-جولة' });
+    // Helper: يقرأ الطور ويؤكد قيمة متوقعة
+    const expectPhase = async (expected: string): Promise<Record<string, unknown>> => {
+      const gs = (await get(`/api/room/${rcode}/state?playerId=${rp1}`)).body.gameState as Record<string, unknown>;
+      expect(gs?.phase).toBe(expected);
+      return gs;
+    };
+    // 1) lobby spin: من spin_start إلى spin_category (resolveStartSpin عشوائي — نقرأ currentPlayerIdx)
+    let gs = await expectPhase('spin_start');
+    let actor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? rp1 : rp2;
+    let r = await post(`/api/room/${rcode}/action`, { type: 'spin', playerId: actor });
+    expect(r.status).toBe(200);
+    await expectPhase('spin_category');
+    // 2) عجلة الفئة الحقيقية: spin من spin_category يطبّق auto-ack وينتقل إلى spin_question
+    gs = (await get(`/api/room/${rcode}/state?playerId=${rp1}`)).body.gameState as Record<string, unknown>;
+    actor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? rp1 : rp2;
+    r = await post(`/api/room/${rcode}/action`, { type: 'spin', playerId: actor });
+    expect(r.status).toBe(200);
+    await expectPhase('spin_question');
+    // 3) عجلة الأسئلة: spin من spin_question يطبّق auto-ack وينتقل إلى question
+    r = await post(`/api/room/${rcode}/action`, { type: 'spin', playerId: actor });
+    expect(r.status).toBe(200);
+    await expectPhase('question');
+    // 4) السؤال نشط: السائل = currentPlayerIdx، المجيب = الآخر
+    gs = (await get(`/api/room/${rcode}/state?playerId=${rp1}`)).body.gameState as Record<string, unknown>;
     expect(gs?.currentQuestionId).toBeTruthy();
-    const idx = (gs?.currentPlayerIdx as number) ?? 0;
-    const asker = idx === 0 ? p1 : p2;
-    const answerer = idx === 0 ? p2 : p1;
-    let r = await post(`/api/room/${code}/action`, { type: 'answer', playerId: answerer, answer: 'إجابة اختبارية من التكامل' });
+    const askerIdx = (gs?.currentPlayerIdx as number) ?? 0;
+    const answerer = askerIdx === 0 ? rp2 : rp1;
+    r = await post(`/api/room/${rcode}/action`, { type: 'answer', playerId: answerer, answer: 'إجابة اختبارية من التكامل' });
     expect(r.status).toBe(200);
-    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
-    expect(gs?.phase).toBe('reaction');
-    const scoreBefore = (gs?.player2Score as number) ?? 0;
-    // المقيّم هو السائل (currentPlayerIdx في reaction)
-    const reactor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? p1 : p2;
-    r = await post(`/api/room/${code}/action`, { type: 'react_love', playerId: reactor });
+    await expectPhase('reaction');
+    // 5) المقيّم = السائل (currentPlayerIdx في طور reaction)، والمجيب = currentAnswerBy
+    gs = (await get(`/api/room/${rcode}/state?playerId=${rp1}`)).body.gameState as Record<string, unknown>;
+    const answererId = gs?.currentAnswerBy as string;
+    const answererIdxForScore = answererId === rp1 ? 0 : 1;
+    const scoreBefore = (answererIdxForScore === 0 ? gs?.player1Score : gs?.player2Score) as number ?? 0;
+    const reactor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? rp1 : rp2;
+    r = await post(`/api/room/${rcode}/action`, { type: 'react_love', playerId: reactor });
     expect(r.status).toBe(200);
-    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
-    expect((gs?.player2Score as number) ?? 0).toBeGreaterThan(scoreBefore);
-    expect(gs?.phase).toBe('round_end');
-    // end_round: currentPlayer الحالي في round_end يُنهي الجولة (يبدّل الدور ويعود إلى spin_category)
-    const endActor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? p1 : p2;
-    r = await post(`/api/room/${code}/action`, { type: 'end_round', playerId: endActor });
+    gs = (await get(`/api/room/${rcode}/state?playerId=${rp1}`)).body.gameState as Record<string, unknown>;
+    const scoreAfter = (answererIdxForScore === 0 ? gs?.player1Score : gs?.player2Score) as number ?? 0;
+    expect(scoreAfter).toBeGreaterThan(scoreBefore);
+    expect((gs?.loveCounter as number) ?? 0).toBeGreaterThan(0);
+    await expectPhase('round_end');
+    // 6) end_round يبدّل الدور ويعود إلى spin_category
+    const endActor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? rp1 : rp2;
+    r = await post(`/api/room/${rcode}/action`, { type: 'end_round', playerId: endActor });
     expect(r.status).toBe(200);
-    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
-    expect(gs?.phase).toBe('spin_category');
-    expect((gs?.currentPlayerIdx as number)).not.toBe((idx) as number);
+    await expectPhase('spin_category');
+    gs = (await get(`/api/room/${rcode}/state?playerId=${rp1}`)).body.gameState as Record<string, unknown>;
+    expect(gs?.currentPlayerIdx).not.toBe(askerIdx);
   });
 
   it('يعيد 400 لأكشن غير صالح', async () => {

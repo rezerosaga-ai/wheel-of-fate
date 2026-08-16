@@ -1,14 +1,14 @@
 {
   "title": "E2 CONFLICT ROOM VERIFICATION",
-  "run_at": "2026-08-16T20:04:04.889+00:00",
-  "room_code": "E32ZKE",
+  "run_at": "2026-08-16T22:19:44.239+00:00",
+  "room_code": "FBZY7R",
   "dbg_endpoint": {
     "status": 200,
     "response": {
       "success": true,
       "gameState": {
-        "id": 550,
-        "roomCode": "E32ZKE",
+        "id": 956,
+        "roomCode": "FBZY7R",
         "currentPlayerIdx": 0,
         "roundNumber": 0,
         "phase": "conflict",
@@ -55,18 +55,18 @@
         "conflictReplyText": null,
         "bombRedirect": null,
         "usedQuestionIds": [],
-        "player1LastSeen": "2026-08-16T20:03:06.722Z",
-        "player2LastSeen": "2026-08-16T20:03:06.979Z",
+        "player1LastSeen": "2026-08-16T22:18:46.984Z",
+        "player2LastSeen": "2026-08-16T22:18:46.849Z",
         "challengeActive": false,
         "challengeQuestionsLeft": 0,
         "challengeQuestionId": null,
         "challengeAnswer": null,
         "challengeBy": null,
-        "updatedAt": "2026-08-16T20:03:08.174Z"
+        "updatedAt": "2026-08-16T22:18:47.794Z"
       },
       "room": {
-        "player1Id": "p_1786910554999_6jsj6hs",
-        "player2Id": "p_1786910561589_xngsugf",
+        "player1Id": "p_1786918694444_iq5dpoy",
+        "player2Id": "p_1786918700926_k3rhpot",
         "player1Name": "ABDO",
         "player2Name": "أنفال"
       }
@@ -79,7 +79,7 @@
       "expected": "غرفة ثنائية نشطة",
       "actual": "ABDO=True, ANFAL=True",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:07.924+00:00"
+      "ts": "2026-08-16T22:18:47.577+00:00"
     },
     {
       "test_id": "E2-02-conflict-ui-abdo",
@@ -87,7 +87,7 @@
       "expected": "شاشة غرفة التفاهم + مربع الرد",
       "actual": "conflict=True, replybox=False",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:14.122+00:00"
+      "ts": "2026-08-16T22:18:53.638+00:00"
     },
     {
       "test_id": "E2-03-conflict-ui-anfal",
@@ -95,7 +95,7 @@
       "expected": "نفس الشاشة للطرف الآخر",
       "actual": "visible=True",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:14.122+00:00"
+      "ts": "2026-08-16T22:18:53.638+00:00"
     },
     {
       "test_id": "E2-04-reply-swaps-turn",
@@ -103,7 +103,7 @@
       "expected": "conflictDialogueCount=1، دور ANFAL (idx=1)",
       "actual": "count=1, idx=1",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:19.165+00:00"
+      "ts": "2026-08-16T22:18:58.566+00:00"
     },
     {
       "test_id": "E2-05-anfal-replies",
@@ -111,7 +111,7 @@
       "expected": "conflictDialogueCount=2",
       "actual": "count=2",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:26.242+00:00"
+      "ts": "2026-08-16T22:19:05.658+00:00"
     },
     {
       "test_id": "E2-06-agree-button",
@@ -119,7 +119,7 @@
       "expected": "زر «فهمنا بعضنا» بعد حوار الطرفين",
       "actual": "ABDO=True, ANFAL=True",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:29.252+00:00"
+      "ts": "2026-08-16T22:19:08.667+00:00"
     },
     {
       "test_id": "E2-07-agree-love",
@@ -127,7 +127,7 @@
       "expected": "conflictAgreed=true و loveCounter=+3",
       "actual": "agreed=True, love=0->3",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:33.778+00:00"
+      "ts": "2026-08-16T22:19:13.235+00:00"
     },
     {
       "test_id": "E2-08-conflict-next",
@@ -135,7 +135,7 @@
       "expected": "العودة إلى question مع نفس السؤال",
       "actual": "phase=question, qid=None",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:40.305+00:00"
+      "ts": "2026-08-16T22:19:19.821+00:00"
     },
     {
       "test_id": "E2-09-refresh-conflict",
@@ -143,7 +143,7 @@
       "expected": "غرفة التفاهم تبقى ظاهرة بعد refresh",
       "actual": "before=True, after=True",
       "status": "PASS",
-      "ts": "2026-08-16T20:03:50.105+00:00"
+      "ts": "2026-08-16T22:19:29.671+00:00"
     },
     {
       "test_id": "E2-10-back-to-game",
@@ -151,7 +151,7 @@
       "expected": "العودة للجولة بعد refresh",
       "actual": "phase=question",
       "status": "PASS",
-      "ts": "2026-08-16T20:04:04.889+00:00"
+      "ts": "2026-08-16T22:19:44.239+00:00"
     }
   ],
   "critical_failures": [],
