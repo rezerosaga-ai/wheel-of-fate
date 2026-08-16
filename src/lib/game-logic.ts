@@ -217,16 +217,41 @@ export function processAction(
     return { updates: {} };
   }
   if (action.type === 'pick_question') {
-    // Two sub-steps: spin_question (set question), then auto-ack
-    const qResult = processAction({ type: 'spin_question', playerId: action.playerId }, state, room);
+    // Two/three sub-steps (full alias: spin + both ACKs): if at spin_category, resolve the category spin first,
+    // then auto-apply the category (ACK), then spin_question, then auto-ack to phase question.
+    let workState = state;
+    let merged: Record<string, unknown> = {};
+    if (state.phase === 'spin_category') {
+      const catResult = processAction({ type: 'spin_category', playerId: action.playerId }, state, room);
+      if (Object.keys(catResult.updates).length === 0) return catResult;
+      const sp = JSON.parse(
+        (catResult.updates.pendingSpinResult as string | undefined) ?? state.pendingSpinResult ?? '{}'
+      ) as SpinResult;
+      const newCategory = sp.value as Category;
+      const isDouble = newCategory === state.lastCategory && state.consecutiveCategoryCount >= 1;
+      const ackUpdates = {
+        phase: 'spin_question',
+        currentCategory: newCategory,
+        consecutiveCategoryCount:
+          newCategory === state.lastCategory ? state.consecutiveCategoryCount + 1 : 1,
+        lastCategory: newCategory,
+        pendingSpinResult: null,
+        updatedAt: new Date(),
+      };
+      merged = { ...catResult.updates, ...ackUpdates };
+      workState = { ...state, ...catResult.updates, ...ackUpdates } as GameStateData;
+      if (isDouble) merged.message = 'double_challenge';
+    }
+    const qResult = processAction({ type: 'spin_question', playerId: action.playerId }, workState, room);
     if (Object.keys(qResult.updates).length === 0) return qResult;
     const sp = JSON.parse(
-      (qResult.updates.pendingSpinResult as string | undefined) ?? state.pendingSpinResult ?? '{}'
+      (qResult.updates.pendingSpinResult as string | undefined) ?? workState.pendingSpinResult ?? '{}'
     ) as SpinResult;
     const qId = parseInt(sp.value, 10);
     const usedIds = [...(state.usedQuestionIds ?? []), qId];
     return {
       updates: {
+        ...merged,
         phase: 'question',
         currentQuestionId: qId,
         currentAnswer: null,
@@ -334,7 +359,11 @@ export function processAction(
     }
 
     case 'spin_category_ack': {
-      const sp = JSON.parse(state.pendingSpinResult ?? '{}') as SpinResult;
+      // A2 FIX (REPAIR_PLAN): guard ضد ACK المكرر — النقرة المزدوجة ترسل ACK مرتين.
+      // ACK الثاني يجب أن يُتجاهل بأمان (idempotent no-op) بدل كسر الحالة (BUG-001/UX-BH01/02).
+      if (state.phase !== 'spin_start') return { updates: {} };
+      if (!state.pendingSpinResult) return { updates: {} };
+      const sp = JSON.parse(state.pendingSpinResult) as SpinResult;
       const newCategory = sp.value as Category;
       const isDouble =
         newCategory === state.lastCategory && state.consecutiveCategoryCount >= 1;
@@ -366,7 +395,10 @@ export function processAction(
     }
 
     case 'spin_question_ack': {
-      const sp = JSON.parse(state.pendingSpinResult ?? '{}') as SpinResult;
+      // A2 FIX (REPAIR_PLAN): guard ضد ACK المكرر — نفس مبدأ spin_category_ack.
+      if (state.phase !== 'spin_question') return { updates: {} };
+      if (!state.pendingSpinResult) return { updates: {} };
+      const sp = JSON.parse(state.pendingSpinResult) as SpinResult;
       const qId = parseInt(sp.value, 10);
       const usedIds = [...(state.usedQuestionIds ?? []), qId];
       return {
@@ -414,6 +446,7 @@ export function processAction(
 
     case 'submit_reaction': {
       if (state.phase !== 'reaction') return { updates: {} };
+      // A2 FIX: guard reaction مزدوج — النقرة المكررة لا تعطي نقاطًا إضافية (idempotent)
       if (state.reactionDone) return { updates: {} };
 
       // The asker (currentPlayer) rates the answerer's response
@@ -770,11 +803,13 @@ export function processAction(
       };
     }
 
-    default:
-      return { updates: {} };
+    default: {
+      // B2 FIX (REPAIR_PLAN): ممنوع النجاح الصامت — أي type غير معروف يرجع خطأ صريحًا
+      // بدل updates={} (الذي كان يسبب success=true بدون أثر → BUG-002/003).
+      return { updates: {}, error: `unknown_action: ${action.type}` };
+    }
   }
 }
-
 function generateGenericDeepen(questionText: string): string {
   const templates = [
     'وكيف أثّر ذلك على علاقتنا؟',

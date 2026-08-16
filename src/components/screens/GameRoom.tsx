@@ -167,6 +167,21 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
   const [floatPoints, setFloatPoints] = useState<FloatPoint[]>([]);
   const floatIdRef = useRef(0);
 
+  // A1 FIX (REPAIR_PLAN): roundEndTimer + useEffect في أعلى المكوّن قبل كل early return
+  // — hooks يجب أن تُستدعى بنفس الترتيب في كل render وإلا React error #310 (UX-BH01/02)
+  const roundEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (phase !== 'round_end') return;
+    const roundKey = gameState?.roundNumber ?? 0;
+    if (roundEndTimerRef.current) clearTimeout(roundEndTimerRef.current);
+    roundEndTimerRef.current = setTimeout(() => {
+      // بعد 8 ثوانٍ من نهاية الجولة: ننتقل تلقائياً للجولة التالية (بصمت)
+      doAction('next_round').catch(() => {});
+    }, 8000);
+    return () => { if (roundEndTimerRef.current) clearTimeout(roundEndTimerRef.current); };
+  }, [phase, gameState?.roundNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   const showFloatingPoints = useCallback((pts: number) => {
     const id = String(floatIdRef.current++);
     setFloatPoints((prev) => [...prev, { id, pts }]);
@@ -474,19 +489,6 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
       </GameRoomLayout>
     );
   }
-
-  // FIX #4: انتقال تلقائي من شاشة نهاية الجولة بعد 8 ثوانٍ (يمنع العلق)
-  const roundEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (phase !== 'round_end') return;
-    const roundKey = gameState?.roundNumber ?? 0;
-    if (roundEndTimerRef.current) clearTimeout(roundEndTimerRef.current);
-    roundEndTimerRef.current = setTimeout(() => {
-      // بعد 8 ثوانٍ من نهاية الجولة: ننتقل تلقائياً للجولة التالية (بصمت)
-      doAction('next_round').catch(() => {});
-    }, 8000);
-    return () => { if (roundEndTimerRef.current) clearTimeout(roundEndTimerRef.current); };
-  }, [phase, gameState?.roundNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── round_end ────────────────────────────────────────────────────────────────
   if (phase === 'round_end') {
