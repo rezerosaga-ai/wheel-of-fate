@@ -1,0 +1,159 @@
+{
+  "title": "E2 CONFLICT ROOM VERIFICATION",
+  "run_at": "2026-08-16T20:04:04.889+00:00",
+  "room_code": "E32ZKE",
+  "dbg_endpoint": {
+    "status": 200,
+    "response": {
+      "success": true,
+      "gameState": {
+        "id": 550,
+        "roomCode": "E32ZKE",
+        "currentPlayerIdx": 0,
+        "roundNumber": 0,
+        "phase": "conflict",
+        "currentCategory": null,
+        "currentQuestionId": null,
+        "currentAnswer": null,
+        "currentAnswerBy": null,
+        "reactionDone": false,
+        "lastReactionBy": null,
+        "lastReactionEmoji": null,
+        "player1Score": 0,
+        "player2Score": 0,
+        "loveCounter": 0,
+        "player1Bomb": 1,
+        "player1Skip": 3,
+        "player1Deepen": 2,
+        "player1DontLaugh": 1,
+        "player2Bomb": 1,
+        "player2Skip": 3,
+        "player2Deepen": 2,
+        "player2DontLaugh": 1,
+        "consecutiveCategoryCount": 0,
+        "lastCategory": null,
+        "fateCardShownAt": 0,
+        "knowMeShownAt": 0,
+        "secretMsg1": null,
+        "secretMsg2": null,
+        "secretMsgRevealed": false,
+        "knowMeQuestion": null,
+        "knowMeAnswer": null,
+        "knowMeGuess": null,
+        "knowMeAnswerBy": null,
+        "knowMeGuessBy": null,
+        "dontLaughActive": false,
+        "dontLaughStartedAt": null,
+        "pendingSpinResult": null,
+        "deepenQuestionText": null,
+        "conflictTopics": [
+          "التوتر"
+        ],
+        "conflictCount": 2,
+        "conflictDialogueCount": 0,
+        "conflictAgreed": false,
+        "conflictReplyText": null,
+        "bombRedirect": null,
+        "usedQuestionIds": [],
+        "player1LastSeen": "2026-08-16T20:03:06.722Z",
+        "player2LastSeen": "2026-08-16T20:03:06.979Z",
+        "challengeActive": false,
+        "challengeQuestionsLeft": 0,
+        "challengeQuestionId": null,
+        "challengeAnswer": null,
+        "challengeBy": null,
+        "updatedAt": "2026-08-16T20:03:08.174Z"
+      },
+      "room": {
+        "player1Id": "p_1786910554999_6jsj6hs",
+        "player2Id": "p_1786910561589_xngsugf",
+        "player1Name": "ABDO",
+        "player2Name": "أنفال"
+      }
+    }
+  },
+  "checks": [
+    {
+      "test_id": "E2-01-room",
+      "client": "both",
+      "expected": "غرفة ثنائية نشطة",
+      "actual": "ABDO=True, ANFAL=True",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:07.924+00:00"
+    },
+    {
+      "test_id": "E2-02-conflict-ui-abdo",
+      "client": "ABDO",
+      "expected": "شاشة غرفة التفاهم + مربع الرد",
+      "actual": "conflict=True, replybox=False",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:14.122+00:00"
+    },
+    {
+      "test_id": "E2-03-conflict-ui-anfal",
+      "client": "ANFAL",
+      "expected": "نفس الشاشة للطرف الآخر",
+      "actual": "visible=True",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:14.122+00:00"
+    },
+    {
+      "test_id": "E2-04-reply-swaps-turn",
+      "client": "ABDO",
+      "expected": "conflictDialogueCount=1، دور ANFAL (idx=1)",
+      "actual": "count=1, idx=1",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:19.165+00:00"
+    },
+    {
+      "test_id": "E2-05-anfal-replies",
+      "client": "ANFAL",
+      "expected": "conflictDialogueCount=2",
+      "actual": "count=2",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:26.242+00:00"
+    },
+    {
+      "test_id": "E2-06-agree-button",
+      "client": "both",
+      "expected": "زر «فهمنا بعضنا» بعد حوار الطرفين",
+      "actual": "ABDO=True, ANFAL=True",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:29.252+00:00"
+    },
+    {
+      "test_id": "E2-07-agree-love",
+      "client": "ANFAL",
+      "expected": "conflictAgreed=true و loveCounter=+3",
+      "actual": "agreed=True, love=0->3",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:33.778+00:00"
+    },
+    {
+      "test_id": "E2-08-conflict-next",
+      "client": "ANFAL",
+      "expected": "العودة إلى question مع نفس السؤال",
+      "actual": "phase=question, qid=None",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:40.305+00:00"
+    },
+    {
+      "test_id": "E2-09-refresh-conflict",
+      "client": "ABDO",
+      "expected": "غرفة التفاهم تبقى ظاهرة بعد refresh",
+      "actual": "before=True, after=True",
+      "status": "PASS",
+      "ts": "2026-08-16T20:03:50.105+00:00"
+    },
+    {
+      "test_id": "E2-10-back-to-game",
+      "client": "ABDO",
+      "expected": "العودة للجولة بعد refresh",
+      "actual": "phase=question",
+      "status": "PASS",
+      "ts": "2026-08-16T20:04:04.889+00:00"
+    }
+  ],
+  "critical_failures": [],
+  "final_status": "VERIFIED"
+}

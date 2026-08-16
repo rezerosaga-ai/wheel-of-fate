@@ -25,6 +25,9 @@ export interface ChatMessage {
   playerName: string;
   content: string;
   messageType: string;
+  voiceUrl?: string | null;
+  clientDedupeKey?: string | null;
+  reactions?: Record<string, { emoji: string; playerName: string }> | null;
   createdAt: string;
 }
 
@@ -41,6 +44,7 @@ export interface GameStateServer {
   reactionDone: boolean;
   lastReactionBy: string | null;
   lastReactionEmoji: string | null;
+  lastReactionType: string | null;
   player1Score: number;
   player2Score: number;
   loveCounter: number;
@@ -69,6 +73,10 @@ export interface GameStateServer {
   pendingSpinResult: string | null;
   deepenQuestionText: string | null;
   conflictTopics: string[];
+  conflictCount: number;
+  conflictDialogueCount: number;
+  conflictAgreed: boolean;
+  conflictReplyText: string | null;
   usedQuestionIds: number[];
   updatedAt: string;
   // ── Challenge ───────────────────────────────────────────────────────────────

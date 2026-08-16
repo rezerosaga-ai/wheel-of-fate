@@ -24,7 +24,7 @@ function baseState(): GameStateData {
     knowMeQuestion: null, knowMeAnswer: null, knowMeGuess: null,
     knowMeAnswerBy: null, knowMeGuessBy: null,
     dontLaughActive: false, pendingSpinResult: null, deepenQuestionText: null,
-    conflictTopics: [], usedQuestionIds: [], updatedAt: new Date(),
+    conflictTopics: [], conflictCount: 0, conflictDialogueCount: 0, conflictAgreed: false, conflictDialogue: null, conflictReplyText: null, usedQuestionIds: [], updatedAt: new Date(),
     challengeActive: false, challengeQuestionsLeft: 0, challengeQuestionId: null,
     challengeAnswer: null, challengeBy: null,
     doublePointsActive: false, mysteryWheelActive: false, customChallenge: null,

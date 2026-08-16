@@ -141,44 +141,70 @@ describe('POST /api/room/[code]/action', () => {
   });
 
   it('spin ثانية تختار فئة وتنتقل إلى spin_question', async () => {
-    const r = await post(`/api/room/${code}/action`, { type: 'spin', playerId: p1 });
+    // resolveStartSpin عشوائي (Math.random) — يجب قراءة currentPlayerIdx الفعلي أولًا.
+    const st0 = await get(`/api/room/${code}/state?playerId=${p1}`);
+    const gs0 = st0.body.gameState as Record<string, unknown>;
+    const idx0 = (gs0?.currentPlayerIdx as number) ?? 0;
+    const actor = idx0 === 0 ? p1 : p2;
+    let r = await post(`/api/room/${code}/action`, { type: 'spin', playerId: actor });
+    // category spin يضبط pendingSpinResult ويبقى في spin_category؛
+    // spin_question_ack يكمل الانتقال إلى spin_question (UI يرسلها بعد إنهاء الأنيميشن).
     expect(r.status).toBe(200);
+    const mid = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
+    if (mid?.phase !== 'spin_question') {
+      r = await post(`/api/room/${code}/action`, { type: 'spin_question_ack', playerId: actor });
+      expect(r.status).toBe(200);
+    }
     const state = await get(`/api/room/${code}/state?playerId=${p1}`);
     const gs = state.body.gameState as Record<string,unknown>;
     expect(gs?.phase).toBe('spin_question');
     expect(gs?.currentCategory).toBeTruthy();
   });
 
-  it('pick_question ينتقل إلى question', async () => {
-    const r = await post(`/api/room/${code}/action`, { type: 'pick_question', playerId: p1 });
-    expect(r.status).toBe(200);
-    const state = await get(`/api/room/${code}/state?playerId=${p1}`);
-    const gs = state.body.gameState as Record<string,unknown>;
+  it('جولة كاملة: سؤال ← إجابة ← تقييم ← نقاط ← نهاية جولة', { timeout: 20000 }, async () => {
+    // المرحلة الحالية spin_question (من الاختبار السابق) مع pendingSpinResult — نكمل للسؤال.
+    // المرحلة الحالية spin_question (من الاختبار السابق) — عجلة السؤال قد تكون مع نتيجة معلقة أو فارغة.
+    const gs1 = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
+    let gs: Record<string, unknown> = {};
+    if (gs1?.phase === 'spin_question') {
+      if (gs1?.pendingSpinResult as string | null) {
+        const r0 = await post(`/api/room/${code}/action`, { type: 'spin_question_ack', playerId: p1 });
+        expect(r0.status).toBe(200);
+      } else {
+        // عجلة الأسئلة: نختار سؤالًا ثم نؤكّد (isCurrentPlayer مطلوب — نقرأه)
+        const actor = ((gs1?.currentPlayerIdx as number) ?? 0) === 0 ? p1 : p2;
+        const r0 = await post(`/api/room/${code}/action`, { type: 'spin', playerId: actor });
+        expect(r0.status).toBe(200);
+        const r1 = await post(`/api/room/${code}/action`, { type: 'spin_question_ack', playerId: actor });
+        expect(r1.status).toBe(200);
+      }
+    }
+    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
+    // السؤال نشط: السائل هو currentPlayerIdx والمجيب هو الآخر
     expect(gs?.phase).toBe('question');
     expect(gs?.currentQuestionId).toBeTruthy();
-  });
-
-  it('answer ينتقل إلى reaction', async () => {
-    const r = await post(`/api/room/${code}/action`, {
-      type: 'answer',
-      playerId: p2,
-      answer: 'إجابة اختبارية من التكامل',
-    });
+    const idx = (gs?.currentPlayerIdx as number) ?? 0;
+    const asker = idx === 0 ? p1 : p2;
+    const answerer = idx === 0 ? p2 : p1;
+    let r = await post(`/api/room/${code}/action`, { type: 'answer', playerId: answerer, answer: 'إجابة اختبارية من التكامل' });
     expect(r.status).toBe(200);
-    const state = await get(`/api/room/${code}/state?playerId=${p1}`);
-    expect((state.body.gameState as Record<string,unknown>)?.phase).toBe('reaction');
-  });
-
-  it('react_love ينتقل إلى round_end ويضيف نقاطاً', async () => {
-    const before = await get(`/api/room/${code}/state?playerId=${p1}`);
-    const scoreBefore = (before.body.gameState as Record<string,unknown>)?.player2Score as number ?? 0;
-
-    const r = await post(`/api/room/${code}/action`, { type: 'react_love', playerId: p1 });
+    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
+    expect(gs?.phase).toBe('reaction');
+    const scoreBefore = (gs?.player2Score as number) ?? 0;
+    // المقيّم هو السائل (currentPlayerIdx في reaction)
+    const reactor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? p1 : p2;
+    r = await post(`/api/room/${code}/action`, { type: 'react_love', playerId: reactor });
     expect(r.status).toBe(200);
-
-    const after = await get(`/api/room/${code}/state?playerId=${p1}`);
-    const gs = after.body.gameState as Record<string,unknown>;
-    expect(gs?.player2Score as number).toBeGreaterThan(scoreBefore);
+    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
+    expect((gs?.player2Score as number) ?? 0).toBeGreaterThan(scoreBefore);
+    expect(gs?.phase).toBe('round_end');
+    // end_round: currentPlayer الحالي في round_end يُنهي الجولة (يبدّل الدور ويعود إلى spin_category)
+    const endActor = ((gs?.currentPlayerIdx as number) ?? 0) === 0 ? p1 : p2;
+    r = await post(`/api/room/${code}/action`, { type: 'end_round', playerId: endActor });
+    expect(r.status).toBe(200);
+    gs = (await get(`/api/room/${code}/state?playerId=${p1}`)).body.gameState as Record<string, unknown>;
+    expect(gs?.phase).toBe('spin_category');
+    expect((gs?.currentPlayerIdx as number)).not.toBe((idx) as number);
   });
 
   it('يعيد 400 لأكشن غير صالح', async () => {

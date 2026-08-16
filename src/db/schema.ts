@@ -113,6 +113,11 @@ export const gameState = pgTable('wof_game_state', {
 
   // Conflict room topics
   conflictTopics: jsonb('conflict_topics').$type<string[]>().default([]),
+  // Phase E2: Conflict Room state
+  conflictCount: integer('conflict_count').notNull().default(0), // weak ratings logged this session
+  conflictDialogueCount: integer('conflict_dialogue_count').notNull().default(0), // guided answers exchanged
+  conflictAgreed: boolean('conflict_agreed').notNull().default(false),
+  conflictReplyText: text('conflict_reply_text'), // latest dialogue reply (Phase E2)
 
   // Bomb redirect: after use_bomb, this player idx must answer (null = none)
   bombRedirect: integer('bomb_redirect'),
@@ -135,13 +140,17 @@ export const gameState = pgTable('wof_game_state', {
 });
 
 // ─── Chat Messages ────────────────────────────────────────────────────────────
+// Phase E features (E1 voice, E4 dedup, E5 reactions)
 export const chatMessages = pgTable('wof_chat_messages', {
   id: serial('id').primaryKey(),
   roomCode: text('room_code').notNull(),
   playerId: text('player_id').notNull(),
   playerName: text('player_name').notNull(),
   content: text('content').notNull(),
-  messageType: text('message_type').notNull().default('text'), // text | system
+  messageType: text('message_type').notNull().default('text'), // text | system | voice
+  voiceUrl: text('voice_url'), // data-url for voice messages (Phase E1)
+  clientDedupeKey: text('client_dedupe_key').unique(), // Phase E4: idempotency key from client
+  reactions: jsonb('reactions').$type<Record<string, { emoji: string; playerName: string }>>().default({}), // Phase E5
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

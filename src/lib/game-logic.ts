@@ -23,6 +23,13 @@ export interface GameStateData {
   reactionDone: boolean;
   lastReactionBy: string | null;
   lastReactionEmoji: string | null;
+  conflictTopics: string[];
+  conflictCount: number;
+  conflictDialogueCount: number;
+  conflictAgreed: boolean;
+  conflictDialogue: string | null;
+  conflictReplyText: string | null;
+  lastReactionType?: string | null;
   player1Score: number;
   player2Score: number;
   loveCounter: number;
@@ -49,7 +56,6 @@ export interface GameStateData {
   dontLaughActive: boolean;
   pendingSpinResult: string | null;
   deepenQuestionText: string | null;
-  conflictTopics: string[];
   usedQuestionIds: number[];
   updatedAt: Date;
   // ── Challenge (UNO-style +2) ─────────────────────────────────────────────
@@ -63,7 +69,7 @@ export interface GameStateData {
   mysteryWheelActive: boolean;            // extra_item: spin a random bonus category
   customChallenge: string | null;         // custom challenge question text
   // ── Bomb redirect ──────────────────────────────────────────────────────────
-  bombRedirect: 0 | 1 | null;             // after use_bomb: the OTHER player must answer
+  bombRedirect: 0 | 1 | null;             // after use_bomb: idx of the player who USED the bomb (asker must answer while active)
 }
 
 export type SpinType = 'start' | 'category' | 'question';
@@ -146,6 +152,9 @@ export type GameAction =
   | { type: 'submit_reaction'; playerId: string; reactionType: string; points: number }
   | { type: 'next_round'; playerId: string }
   | { type: 'use_bomb'; playerId: string }
+  | { type: 'conflict_step'; playerId: string; text: string }
+  | { type: 'conflict_agree'; playerId: string }
+  | { type: 'conflict_next'; playerId: string }
   | { type: 'use_skip'; playerId: string }
   | { type: 'use_deepen'; playerId: string }
   | { type: 'use_dont_laugh'; playerId: string }
@@ -153,7 +162,6 @@ export type GameAction =
   // know_me actions accept either `answer`/`guess` or `text` field
   | { type: 'know_me_answer'; playerId: string; answer?: string; text?: string }
   | { type: 'know_me_guess'; playerId: string; guess?: string; text?: string }
-  | { type: 'conflict_step'; playerId: string; stepAnswer: string }
   | { type: 'end_session'; playerId: string }
   | { type: 'heartbeat'; playerId: string }
   // ── Challenge (UNO-style +2) ──────────────────────────────────────────────
@@ -173,6 +181,8 @@ export type GameAction =
   | { type: 'react_bold'; playerId: string }
   | { type: 'react_close'; playerId: string }
   | { type: 'react_surprised'; playerId: string }
+  | { type: 'react_barf'; playerId: string }
+  | { type: 'react_cold'; playerId: string }
   | { type: 'end_round'; playerId: string }
   | { type: 'submit_secret_msg'; playerId: string; message: string; isPlayer1: boolean }
   | { type: 'reveal_secret'; playerId: string }
@@ -212,6 +222,31 @@ export function processAction(
           updatedAt: new Date(),
         } as Partial<GameStateData>,
         message: isDouble ? 'double_challenge' : undefined,
+      };
+    }
+    if (state.phase === 'spin_question') {
+      // The UI sends 'spin' from the spin_question wheel too — resolve the question and auto-ack
+      // in one step (no separate ACK comes from the frontend).
+      const qResult = processAction({ type: 'spin_question', playerId: action.playerId }, state, room);
+      if (Object.keys(qResult.updates).length === 0) return qResult;
+      const sp = JSON.parse(
+        (qResult.updates.pendingSpinResult as string | undefined) ?? state.pendingSpinResult ?? '{}'
+      ) as SpinResult;
+      const qId = parseInt(sp.value, 10);
+      const usedIds = [...(state.usedQuestionIds ?? []), qId];
+      return {
+        updates: {
+          ...qResult.updates,
+          phase: 'question',
+          currentQuestionId: qId,
+          currentAnswer: null,
+          currentAnswerBy: null,
+          reactionDone: false,
+          deepenQuestionText: null,
+          pendingSpinResult: null,
+          usedQuestionIds: usedIds,
+          updatedAt: new Date(),
+        },
       };
     }
     return { updates: {} };
@@ -285,6 +320,12 @@ export function processAction(
   if (action.type === 'react_bold') {
     return processAction({ type: 'submit_reaction', playerId: action.playerId, reactionType: 'bold', points: 2 }, state, room);
   }
+  if (action.type === 'react_barf') {
+    return processAction({ type: 'submit_reaction', playerId: action.playerId, reactionType: 'barf', points: 0 }, state, room);
+  }
+  if (action.type === 'react_cold') {
+    return processAction({ type: 'submit_reaction', playerId: action.playerId, reactionType: 'cold', points: 0 }, state, room);
+  }
   if (action.type === 'react_close') {
     return processAction({ type: 'submit_reaction', playerId: action.playerId, reactionType: 'close', points: 3 }, state, room);
   }
@@ -292,7 +333,21 @@ export function processAction(
     return processAction({ type: 'submit_reaction', playerId: action.playerId, reactionType: 'surprised', points: 2 }, state, room);
   }
   if (action.type === 'end_round') {
-    return processAction({ type: 'next_round', playerId: action.playerId }, state, room);
+    // E2: نقاط النزاع تُحسب من آخر إيموجي ردٍّ ضُعف (الواجهة لا تفرّق تصنيفًا)
+    const WEAK_REACTIONS_TYPES = ['barf', 'cold', 'surprised'];
+    const WEAK_FROM_EMOJI = ['😢', '🥶', '😲'];
+    const emojiIsWeak = WEAK_FROM_EMOJI.includes(state.lastReactionEmoji ?? '');
+    // لا ازدواجية: weak emoji تُحسب مرة واحدة فقط — إما من submit_reaction
+    // (إن كان reactionType ضعيفًا) وإما هنا في end_round (من الإيموجي)
+    const alreadyCounted = WEAK_REACTIONS_TYPES.includes(state.lastReactionType ?? '');
+    const base = processAction({ type: 'next_round', playerId: action.playerId }, state, room);
+    if (emojiIsWeak && !alreadyCounted) {
+      const topics = (state.conflictTopics ?? []) as string[];
+      const topic = `${state.currentCategory ?? 'سؤال'} — سؤال#${(state.roundNumber ?? 0) + 1}`;
+      base.updates.conflictTopics = [...topics, topic].slice(-6);
+      base.updates.conflictCount = (state.conflictCount ?? 0) + 1;
+    }
+    return base;
   }
   if (action.type === 'submit_secret_msg') {
     const a = action as { type: 'submit_secret_msg'; playerId: string; message: string; isPlayer1: boolean };
@@ -307,7 +362,8 @@ export function processAction(
     return processAction({ type: 'next_round', playerId: action.playerId }, state, room);
   }
 
-  switch (action.type) {
+  const t: string = action.type;
+  switch (t) {
     case 'heartbeat': {
       const idx = playerIdx(action.playerId, room);
       if (idx === 0) return { updates: { player1LastSeen: now } as Partial<GameStateData> };
@@ -325,6 +381,68 @@ export function processAction(
           currentPlayerIdx: winnerIdx,
           roundNumber: 1,
           pendingSpinResult: null,
+          updatedAt: now,
+        },
+      };
+    }
+
+    case 'spin': {
+      // The UI's actual action name for both the lobby spin and the category/question wheels.
+      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
+      if (['waiting', 'spin_start'].includes(state.phase)) {
+        // Lobby spin: resolve who goes first and jump to the category wheel.
+        const result = resolveStartSpin(room.player1Id, room.player2Id ?? room.player1Id);
+        const winnerIdx = result.value === room.player1Id ? 0 : 1;
+        return {
+          updates: {
+            phase: 'spin_category',
+            currentPlayerIdx: winnerIdx,
+            roundNumber: 1,
+            pendingSpinResult: null,
+            updatedAt: now,
+          },
+        };
+      }
+      if (!['spin_category', 'round_end', 'spin_question'].includes(state.phase)) return { updates: {} };
+      // Category wheel or question wheel: store pending result and move forward.
+      let phase: string = state.phase;
+      let pending: string | null = null;
+      if (state.phase === 'spin_question') {
+        const result = resolveQuestionSpin(state);
+        phase = 'question';
+        pending = JSON.stringify(result);
+      } else {
+        const result = resolveCategorySpin(state);
+        phase = 'spin_question';
+        pending = JSON.stringify(result);
+      }
+      return {
+        updates: {
+          phase,
+          pendingSpinResult: pending,
+          updatedAt: now,
+        },
+      };
+    }
+
+    case 'pick_question': {
+      // UI alias for the question wheel when already in spin_question phase.
+      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
+      if (state.phase !== 'spin_question') return { updates: {} };
+      if (!state.pendingSpinResult) return { updates: {} };
+      const sp = JSON.parse(state.pendingSpinResult) as SpinResult;
+      const qId = parseInt(sp.value, 10);
+      const usedIds = [...(state.usedQuestionIds ?? []), qId];
+      return {
+        updates: {
+          phase: 'question',
+          currentQuestionId: qId,
+          currentAnswer: null,
+          currentAnswerBy: null,
+          reactionDone: false,
+          deepenQuestionText: null,
+          pendingSpinResult: null,
+          usedQuestionIds: usedIds,
           updatedAt: now,
         },
       };
@@ -361,8 +479,29 @@ export function processAction(
     case 'spin_category_ack': {
       // A2 FIX (REPAIR_PLAN): guard ضد ACK المكرر — النقرة المزدوجة ترسل ACK مرتين.
       // ACK الثاني يجب أن يُتجاهل بأمان (idempotent no-op) بدل كسر الحالة (BUG-001/UX-BH01/02).
-      if (state.phase !== 'spin_start') return { updates: {} };
+      // من round_end/round transitions العجلة تبدأ من المرحلة الجديدة (spin_category)،
+      // لذا يُقبل ACK إذا كانت المرحلة تملك نتيجة معلقة (pendingSpinResult غير فارغة).
+      if (!['spin_start', 'spin_category', 'round_end'].includes(state.phase)) return { updates: {} };
       if (!state.pendingSpinResult) return { updates: {} };
+      if (state.phase !== 'spin_start') {
+        // مرحلة لاحقة: انتقل إلى spin_question مع مسح النتيجة المعلقة
+        const sp = JSON.parse(state.pendingSpinResult) as SpinResult;
+        const newCategory = sp.value as Category;
+        const isDouble =
+          newCategory === state.lastCategory && state.consecutiveCategoryCount >= 1;
+        return {
+          updates: {
+            phase: 'spin_question',
+            currentCategory: newCategory,
+            consecutiveCategoryCount:
+              newCategory === state.lastCategory ? state.consecutiveCategoryCount + 1 : 1,
+            lastCategory: newCategory,
+            pendingSpinResult: null,
+            isDoubleChallenge: isDouble,
+            updatedAt: now,
+          } as Partial<GameStateData>,
+        };
+      }
       const sp = JSON.parse(state.pendingSpinResult) as SpinResult;
       const newCategory = sp.value as Category;
       const isDouble =
@@ -417,6 +556,7 @@ export function processAction(
     }
 
     case 'submit_answer': {
+      const sa = action as Extract<GameAction, { type: 'submit_answer' }>;
       if (state.phase !== 'question') return { updates: {}, error: 'لا يوجد سؤال نشط الآن' };
       if (state.currentAnswer) return { updates: {}, error: 'تمت الإجابة على هذا السؤال بالفعل' };
       // The OTHER player (not currentPlayer) answers — currentPlayer is the asker.
@@ -436,8 +576,8 @@ export function processAction(
       return {
         updates: {
           phase: 'reaction',
-          currentAnswer: action.answer,
-          currentAnswerBy: action.playerId,
+          currentAnswer: sa.answer,
+          currentAnswerBy: sa.playerId,
           bombRedirect: null,
           updatedAt: now,
         },
@@ -445,6 +585,7 @@ export function processAction(
     }
 
     case 'submit_reaction': {
+      const sr = action as Extract<GameAction, { type: 'submit_reaction' }>;
       if (state.phase !== 'reaction') return { updates: {} };
       // A2 FIX: guard reaction مزدوج — النقرة المكررة لا تعطي نقاطًا إضافية (idempotent)
       if (state.reactionDone) return { updates: {} };
@@ -457,20 +598,35 @@ export function processAction(
 
       const currentAnswererScore = (state[answererScoreKey as keyof GameStateData] as number) ?? 0;
       // ── double_points: if active, multiply reaction points by 2 and deactivate ──
-      const effectivePoints = state.doublePointsActive ? action.points * 2 : action.points;
+      const effectivePoints = state.doublePointsActive ? sr.points * 2 : sr.points;
       // FIX #6: حفظ من ردّ ونوع الإيموجي حتى يظهر بوضوح للطرفين
       const REACTION_EMOJI: Record<string, string> = {
-        love: '❤️', laugh: '😂', deep: '🧠', touching: '🥹', bold: '🔥', close: '⭐', surprised: '😲',
+        love: '❤️', laugh: '😂', deep: '🧠', touching: '🥹', bold: '🔥', close: '⭐',
+        surprised: '😲', barf: '😢', cold: '🥶',
       };
       const updates: Partial<GameStateData> = {
         [answererScoreKey]: currentAnswererScore + effectivePoints,
         loveCounter: (state.loveCounter ?? 0) + 1,
         reactionDone: true,
-        lastReactionBy: action.playerId,
-        lastReactionEmoji: REACTION_EMOJI[action.reactionType ?? ''] ?? '❤️',
+        lastReactionBy: sr.playerId,
+        lastReactionEmoji: REACTION_EMOJI[sr.reactionType ?? ''] ?? '❤️',
         doublePointsActive: false, // consume the effect regardless
         updatedAt: now,
       };
+
+      // ── مرحلة E2 — Conflict Detection ──────────────────────────────────────
+      // تصنيف ضعيف (barf/cold/surprised) يسجّل نقطة نزاع — لا ننتقل فورًا
+      // بل نجمع حتى الحدّ بعد انتهاء الجولة (لا نكسر إيقاع اللعب)
+      const WEAK_REACTIONS = ['barf', 'cold', 'surprised'];
+      if (WEAK_REACTIONS.includes(sr.reactionType ?? '')) {
+        const topics = (state.conflictTopics ?? []) as string[];
+        const topic = `${state.currentCategory ?? 'سؤال'} — سؤال#${(state.roundNumber ?? 0) + 1}`;
+        Object.assign(updates, {
+          lastReactionType: sr.reactionType,
+          conflictTopics: [...topics, topic].slice(-6),
+          conflictCount: (state.conflictCount ?? 0) + 1,
+        });
+      }
 
       // Check special triggers
       const nextRound = state.roundNumber + 1;
@@ -506,6 +662,23 @@ export function processAction(
       if (!['round_end', 'fate_card', 'know_me', 'dont_laugh'].includes(state.phase)) return { updates: {} };
       if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {} };
       const nextPlayer = state.currentPlayerIdx === 0 ? 1 : 0;
+
+      // ── مرحلة E2 — Conflict Room: بعد تصنيفين ضعيفين في الجلسة ────────
+      // ندخل حوار النزاع المتناوب قبل سؤال جديد
+      const conflictThreshold = 2;
+      if ((state.conflictCount ?? 0) >= conflictThreshold && !(state.conflictAgreed ?? false)) {
+        return {
+          updates: {
+            phase: 'conflict',
+            roundNumber: (state.roundNumber ?? 0) + 1,
+            currentPlayerIdx: nextPlayer,
+            conflictDialogueCount: 0,
+            conflictReplyText: null,
+            updatedAt: now,
+          },
+        };
+      }
+
       return {
         updates: {
           phase: 'spin_category',
@@ -531,6 +704,67 @@ export function processAction(
       };
     }
 
+    // ── مرحلة E2 — Conflict Room dialogue (تناوب): conflict_step = تناوب الرد ───
+    case 'conflict_step': {
+      const cs = action as Extract<GameAction, { type: 'conflict_step' }>;
+      if (state.phase !== 'conflict') return { updates: {}, error: 'غرفة النزاع غير نشطة' };
+      if (!isCurrentPlayer(action.playerId, state, room)) return { updates: {}, error: 'ليس دورك في الحوار' };
+      if (typeof cs.text !== 'string' || cs.text.trim().length < 2) {
+        return { updates: {}, error: 'اكتب ردّك أولًا' };
+      }
+      const actorName = room.player1Id === cs.playerId ? (room.player1Name ?? 'الطرف الأول') : (room.player2Name ?? 'الطرف الثاني');
+      return {
+        updates: {
+          currentPlayerIdx: (playerIdx(cs.playerId, room) === 0 ? 1 : 0) as 0 | 1,
+          conflictDialogueCount: (state.conflictDialogueCount ?? 0) + 1,
+          conflictReplyText: cs.text.trim(), // kept so the other client can display it
+          updatedAt: now,
+        },
+        message: `ردّ ${actorName}: ${cs.text.trim()}`,
+      };
+    }
+
+    // ── مرحلة E2 — Mutual Agreement + Love Counter ───────────────────────
+    case 'conflict_agree': {
+      if (state.phase !== 'conflict') return { updates: {}, error: 'غرفة النزاع غير نشطة' };
+      // الاتفاق المتبادل: الزر ظاهر للطرفين بعد حوار كل منهما — أي طرف يمكنه تأكيده
+      if ((state.conflictDialogueCount ?? 0) < 2) {
+        return { updates: {}, error: 'يجب أن يشارك الطرفان في الحوار أولًا' };
+      }
+      return {
+        updates: {
+          conflictAgreed: true,
+          loveCounter: (state.loveCounter ?? 0) + 3,
+          updatedAt: now,
+        },
+        message: 'اتفقنا على فهم أفضل 💞 (+3 حب)',
+      };
+    }
+
+    // ── مرحلة E2 — العودة لسؤال المتابعة بعد الاتفاق ────────────────────
+    case 'conflict_next': {
+      if (state.phase !== 'conflict') return { updates: {}, error: 'غرفة النزاع غير نشطة' };
+      if (!(state.conflictAgreed ?? false)) return { updates: {}, error: 'لم يتم الاتفاق المتبادل بعد' };
+      // بعد الاتفاق المتبادل: العودة لسؤال المتابعة — الدور ينتقل للطرف الآخر
+      const nextPlayer2 = state.currentPlayerIdx === 0 ? 1 : 0;
+      return {
+        updates: {
+          phase: 'question',
+          currentPlayerIdx: nextPlayer2,
+          currentQuestionId: state.currentQuestionId ?? null,
+          currentCategory: state.currentCategory ?? null,
+          currentAnswer: null,
+          currentAnswerBy: null,
+          reactionDone: false,
+          conflictDialogueCount: 0,
+          conflictAgreed: false,
+          conflictTopics: [],
+          conflictCount: 0,
+          updatedAt: now,
+        },
+      };
+    }
+
     case 'use_bomb': {
       if (state.phase !== 'question') return { updates: {}, error: 'القنبلة متاحة فقط أثناء السؤال' };
       if (state.currentAnswer) return { updates: {}, error: 'فات الأوان — تمّت الإجابة بالفعل' };
@@ -550,7 +784,7 @@ export function processAction(
       return {
         updates: {
           [bombKey]: bombCount - 1,
-          bombRedirect: (actorIdx === 0 ? 1 : 0) as 0 | 1,
+          bombRedirect: actorIdx,
           updatedAt: now,
         } as Partial<GameStateData>,
         message: 'bomb',
@@ -635,9 +869,10 @@ export function processAction(
     }
 
     case 'know_me_answer': {
+      const km = action as Extract<GameAction, { type: 'know_me_answer' }>;
       if (state.phase !== 'know_me') return { updates: {} };
-      if (action.playerId !== state.knowMeAnswerBy) return { updates: {} };
-      const answerText = action.answer ?? action.text ?? '';
+      if (km.playerId !== state.knowMeAnswerBy) return { updates: {} };
+      const answerText = km.answer ?? km.text ?? '';
       if (!answerText) return { updates: {} };
       return {
         updates: {
@@ -648,13 +883,14 @@ export function processAction(
     }
 
     case 'know_me_guess': {
+      const kg = action as Extract<GameAction, { type: 'know_me_guess' }>;
       if (state.phase !== 'know_me') return { updates: {} };
-      if (action.playerId !== state.knowMeGuessBy) return { updates: {} };
-      const guessText = action.guess ?? action.text ?? '';
+      if (kg.playerId !== state.knowMeGuessBy) return { updates: {} };
+      const guessText = kg.guess ?? kg.text ?? '';
       const correct =
         guessText.trim().toLowerCase() ===
         (state.knowMeAnswer ?? '').trim().toLowerCase();
-      const guessIdx = playerIdx(action.playerId, room) as 0 | 1;
+      const guessIdx = playerIdx(kg.playerId, room) as 0 | 1;
       const scoreKey = guessIdx === 0 ? 'player1Score' : 'player2Score';
       const currentScore = (state[scoreKey as keyof GameStateData] as number) ?? 0;
       const nextRound = state.roundNumber + 1;
@@ -671,15 +907,16 @@ export function processAction(
     }
 
     case 'secret_msg': {
-      const idx = playerIdx(action.playerId, room);
+      const sm = action as Extract<GameAction, { type: 'secret_msg' }>;
+      const idx = playerIdx(sm.playerId, room);
       const msgKey = idx === 0 ? 'secretMsg1' : 'secretMsg2';
       const updates: Partial<GameStateData> = {
-        [msgKey]: action.message,
+        [msgKey]: sm.message,
         updatedAt: now,
       };
       // Check if both sent
-      const msg1 = idx === 0 ? action.message : state.secretMsg1;
-      const msg2 = idx === 1 ? action.message : state.secretMsg2;
+      const msg1 = idx === 0 ? sm.message : state.secretMsg1;
+      const msg2 = idx === 1 ? sm.message : state.secretMsg2;
       if (msg1 && msg2 && !state.secretMsgRevealed) {
         Object.assign(updates, { secretMsgRevealed: true });
       }
@@ -726,14 +963,14 @@ export function processAction(
 
     // ── Challenge answer: the responder answers the challenge question ─────────
     case 'challenge_answer': {
+      const ca = action as Extract<GameAction, { type: 'challenge_answer' }>;
       if (state.phase !== 'challenge') return { updates: {} };
       if (!state.challengeActive) return { updates: {} };
       // The OTHER player (not challengeBy) must answer
-      if (action.playerId === state.challengeBy) return { updates: {} };
-      if (!action.answer?.trim()) return { updates: {} };
-
+      if (ca.playerId === state.challengeBy) return { updates: {} };
+      if (!ca.answer?.trim()) return { updates: {} };
       // fix: نحفظ الإجابة أولاً قبل الانتقال للسؤال التالي
-      const trimmedAnswer = action.answer.trim();
+      const trimmedAnswer = ca.answer.trim();
       const remaining = state.challengeQuestionsLeft - 1;
 
       if (remaining > 0) {
@@ -788,10 +1025,11 @@ export function processAction(
 
     // ── Custom challenge: set a player-defined question ─────────────────────────
     case 'set_custom_challenge': {
-      if (!action.question?.trim()) return { updates: {} };
+      const sc = action as Extract<GameAction, { type: 'set_custom_challenge' }>;
+      if (!sc.question?.trim()) return { updates: {} };
       return {
         updates: {
-          customChallenge: action.question.trim(),
+          customChallenge: sc.question.trim(),
           phase: 'challenge',
           challengeActive: true,
           challengeQuestionsLeft: 1,
@@ -807,7 +1045,7 @@ export function processAction(
     default: {
       // B2 FIX (REPAIR_PLAN): ممنوع النجاح الصامت — أي type غير معروف يرجع خطأ صريحًا
       // بدل updates={} (الذي كان يسبب success=true بدون أثر → BUG-002/003).
-      return { updates: {}, error: `unknown_action: ${action.type}` };
+      return { updates: {}, error: `unknown_action: ${(action as { type: string }).type}` };
     }
   }
 }

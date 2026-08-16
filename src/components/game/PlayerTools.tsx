@@ -15,7 +15,9 @@ interface PlayerToolsProps {
   currentAnswer: string | null;
 }
 
-// ─── الردود الست مع النقاط ───────────────────────────────────────────────────
+// ─── الردود الثمانية مع النقاط ──────────────────────────────────────────────
+// المرحلة E2: أضفنا ثلاثة ردود «ضعيفة» (لا نقاط لها) — تصنيف ضعيف يسجّل
+// نقطة نزاع وقد يقود إلى غرفة التفاهم بعد تصنيفين ضعيفين في الجلسة.
 const REACTIONS = [
   { emoji: '❤️',  label: 'أحببته',   type: 'react_love',     points: 1, color: '#F4A8B8' },
   { emoji: '😂',  label: 'مضحكة',    type: 'react_laugh',    points: 1, color: '#F9D080' },
@@ -23,6 +25,10 @@ const REACTIONS = [
   { emoji: '🥹',  label: 'مؤثرة',    type: 'react_touching', points: 2, color: '#F9C8D3' },
   { emoji: '🔥',  label: 'جريئة',    type: 'react_bold',     points: 2, color: '#E8926A' },
   { emoji: '⭐',  label: 'مميزة',    type: 'react_close',    points: 3, color: '#F9D08A' },
+  // ── ردود ضعيفة (Phase E2): 0 نقاط + نقطة نزاع ──────────────────────────
+  { emoji: '😢',  label: 'محزنة',    type: 'react_barf',  points: 0, color: '#9DB4D6', weak: true },
+  { emoji: '🥶',  label: 'باردة',    type: 'react_cold',  points: 0, color: '#9DB4D6', weak: true },
+  { emoji: '😲',  label: 'صادمة',    type: 'react_surprised', points: 0, color: '#9DB4D6', weak: true },
 ];
 
 export default function PlayerTools({

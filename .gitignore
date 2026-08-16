@@ -36,3 +36,4 @@ dist-ssr
 .env
 .vercel
 .env*
+qa-campaign/__pycache__/

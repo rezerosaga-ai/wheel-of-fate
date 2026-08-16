@@ -167,6 +167,8 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
 
   // Floating points
   const [floatPoints, setFloatPoints] = useState<FloatPoint[]>([]);
+  // ── Conflict Room: مسودة الرد المحلية (الكتابة يجب أن تكون محلية — conflict_reply لم يعد يُستخدم للازدواجية)
+  const [conflictReplyDraft, setConflictReplyDraft] = useState<string>('');
   const floatIdRef = useRef(0);
 
   // A1 FIX (REPAIR_PLAN): roundEndTimer + useEffect في أعلى المكوّن قبل كل early return
@@ -617,8 +619,156 @@ export default function GameRoom({ roomCode }: GameRoomProps) {
     );
   }
 
+  // ─── conflict: Conflict Room (E2) — حوار متناوب قبل سؤال جديد ──────────────
+  if (phase === 'conflict') {
+    // المسودة المحلية تُستخدم أثناء الكتابة؛ وعند وصول رد الطرف الآخر يُعرض نص الـ server
+    const replyText = conflictReplyDraft || (gameState.conflictReplyText ?? '');
+    const dialogueTurn = (gameState.conflictDialogueCount ?? 0) % 2;
+    const topics = (gameState.conflictTopics ?? []) as string[];
+    return (
+      <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div
+            className="wof-animate-in"
+            style={{
+              background: 'linear-gradient(135deg, #FFF0F3 0%, #FFFFFF 60%)',
+              border: '2px solid var(--wof-accent)',
+              borderRadius: 24,
+              padding: '22px 20px',
+              textAlign: 'center',
+              boxShadow: '0 10px 32px rgba(217,108,131,0.18)',
+              animation: 'phase-slide-in 320ms ease both, wof-pop 420ms cubic-bezier(0.23,1,0.32,1) both',
+            }}
+          >
+            <div style={{ fontSize: 44, lineHeight: 1.2 }}>💔➡️💞</div>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--wof-accent)', margin: '10px 0 6px' }}>
+              غرفة التفاهم
+            </h2>
+            <p style={{ fontSize: 14, color: 'var(--wof-text-secondary)', margin: 0, lineHeight: 1.8 }}>
+              لاحظنا بعض التوتر في آخر جولات… لا بأس، تحدثا بصراحة ثم اتفقا على فهم أفضل.
+            </p>
+            {topics.length > 0 && (
+              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                {topics.map((t, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--wof-accent)',
+                      background: 'rgba(232,143,160,0.14)',
+                      border: '1px solid rgba(232,143,160,0.35)',
+                      borderRadius: 999,
+                      padding: '4px 12px',
+                    }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ردود الحوار المتناوب — تظهر كبطاقات متراكمة */}
+          {replyText && (
+            <div
+              className="wof-animate-in"
+              style={{
+                background: 'white',
+                border: '2px solid var(--wof-secondary)',
+                borderRadius: 18,
+                padding: '14px 18px',
+                textAlign: 'center',
+                animation: 'phase-slide-in 280ms ease both',
+              }}
+            >
+              <p style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.7, margin: 0 }}>{replyText}</p>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <textarea
+              className="wof-input"
+              value={replyText}
+              placeholder={isMyTurn && !gameState.conflictAgreed ? 'اكتب ما في قلبك للطرف الآخر…' : 'انتظر رد الطرف الآخر…'}
+              onChange={(e) => setConflictReplyDraft(e.target.value)}
+              dir="rtl"
+              rows={2}
+              disabled={!isMyTurn || (gameState.conflictAgreed ?? false) || isActionPending}
+              style={{ resize: 'none', transition: 'opacity 200ms' }}
+              aria-label="ردّك في غرفة التفاهم"
+            />
+            {isMyTurn && !(gameState.conflictAgreed ?? false) && (
+              <button
+                className="wof-btn wof-btn-primary wof-btn-full"
+                onClick={() => {
+                  void doAction('conflict_step', { text: (conflictReplyDraft || replyText).trim() });
+                  setConflictReplyDraft('');
+                }}
+                disabled={isActionPending || (replyText ?? '').trim().length < 2}
+              >
+                📩 أرسل الرد
+              </button>
+            )}
+          </div>
+
+          {!isMyTurn && !gameState.conflictAgreed && (
+            <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--wof-text-secondary)' }}>
+              {dialogueTurn === 0 ? `${partnerName} يتحدث أولًا…` : `${partnerName} يرد الآن…`}
+            </p>
+          )}
+
+          {/* الاتفاق المتبادل — يظهر بعد مرور الطرفين في الحوار */}
+          {(gameState.conflictAgreed ?? false) && (
+            <div
+              className="wof-animate-in"
+              style={{
+                background: 'linear-gradient(135deg, #FFF6F8 0%, #FFFFFF 100%)',
+                border: '2px solid var(--wof-secondary)',
+                borderRadius: 20,
+                padding: '16px 20px',
+                textAlign: 'center',
+                animation: 'phase-slide-in 300ms ease both, wof-pop 380ms cubic-bezier(0.23,1,0.32,1) both',
+                boxShadow: '0 8px 24px rgba(217,108,131,0.14)',
+              }}
+            >
+              <div style={{ fontSize: 34, lineHeight: 1.2 }}>🤝💞</div>
+              <p style={{ fontSize: 16, fontWeight: 900, color: 'var(--wof-primary)', margin: '8px 0' }}>
+                اتفقتما على فهم أفضل!
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--wof-text-secondary)', margin: 0 }}>
+                +3 نقاط حب 💞 — لنكمل السؤال من حيث توقفنا
+              </p>
+              {(
+                <button
+                  className="wof-btn wof-btn-primary wof-btn-full"
+                  onClick={() => void doAction('conflict_next')}
+                  disabled={isActionPending}
+                  style={{ marginTop: 12, minWidth: 180 }}
+                >
+                  متابعة السؤال ▶
+                </button>
+              )}
+            </div>
+          )}
+
+          {!gameState.conflictAgreed && (
+            <button
+              className="wof-btn wof-btn-outline wof-btn-full"
+              onClick={() => void doAction('conflict_agree')}
+              disabled={isActionPending}
+              style={{ borderWidth: 2 }}
+            >
+              🤝 فهمنا بعضنا — لنواصل
+            </button>
+          )}
+        </div>
+      </GameRoomLayout>
+    );
+  }
+
   // ─── Fallback: phase غير معروفة أو وسيطة → لا شاشة سوداء أبداً ────────────
-  const knownPhases = ['waiting', 'spin_start', 'spin_category', 'spin_question', 'question', 'reaction', 'round_end', 'fate_card', 'know_me', 'secret_msg', 'dont_laugh', 'session_end', 'challenge'];
+  const knownPhases = ['waiting', 'spin_start', 'spin_category', 'spin_question', 'question', 'reaction', 'round_end', 'fate_card', 'know_me', 'secret_msg', 'dont_laugh', 'session_end', 'challenge', 'conflict'];
   if (phase && !knownPhases.includes(phase)) {
     return (
       <GameRoomLayout p1Name={p1Name} p2Name={p2Name} musicOn={musicOn} toggleMusic={toggleMusic} partnerName={partnerName} gameState={gameState} phase={phase} isMyTurn={isMyTurn} roomCode={roomCode} chatOpen={chatOpen} setChatOpen={setChatOpen} messages={messages} poll={poll} showDontLaugh={showDontLaugh} dontLaughSeconds={dontLaughSeconds} confettiParts={confettiParts} floatPoints={floatPoints} setFloatPoints={setFloatPoints} lastActionError={lastActionError} setActionError={setActionError} isActionPending={isActionPending} doAction={doAction}>
