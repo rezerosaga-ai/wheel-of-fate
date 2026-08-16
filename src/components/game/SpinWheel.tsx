@@ -181,11 +181,14 @@ export default function SpinWheel({
       ctx.fillText(cat.emoji, 0, 0);
       ctx.restore();
 
-      // Label
+      // Label — UX-005 FIX: rotate so Arabic text reads from outside → center
+      // along the radial direction (never upside-down on the lower half).
       const labelR = r * 0.46;
       ctx.save();
       ctx.translate(cx + labelR * Math.cos(midA), cy + labelR * Math.sin(midA));
-      ctx.rotate(midA + Math.PI / 2);
+      // Rotating by (midA - π/2) aligns the +x axis with the outward radial,
+      // so fillText draws bottom→top, readable from the rim inward.
+      ctx.rotate(midA - Math.PI / 2);
       ctx.font         = `700 ${Math.floor(r * 0.08)}px Cairo, sans-serif`;
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';

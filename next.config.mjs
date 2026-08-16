@@ -10,5 +10,4 @@ const nextConfig = {
     REACTUS_BASE_URL: process.env.REACTUS_BASE_URL ?? '',
   },
 };
-
 export default nextConfig;

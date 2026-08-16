@@ -82,6 +82,8 @@ interface MusicTrack {
 let currentTrack: MusicTrack | null = null;
 let musicVolume = 0.22;
 let musicEnabled = true;
+// R8: remember the last active theme so toggle() resumes the SAME mood
+let lastTheme = 'default';
 
 // ─── سلّم الموسيقى المرح (C major pentatonic) ────────────────────────────────
 // الترددات: C4, D4, E4, G4, A4, C5, D5, E5
@@ -268,6 +270,7 @@ export const BGM = {
     const c = getCtx();
     if (!c) return;
     if (c.state === 'suspended') void c.resume();
+    lastTheme = theme;
     stopCurrentTrack(700);
     setTimeout(() => {
       if (!musicEnabled) return;
@@ -279,14 +282,20 @@ export const BGM = {
     stopCurrentTrack(fadeMs);
   },
 
+  // R8 FIX: toggle resumes the LAST active theme instead of always resetting to default
   toggle(): boolean {
     musicEnabled = !musicEnabled;
     if (!musicEnabled) {
       stopCurrentTrack(400);
     } else {
-      BGM.play('default');
+      BGM.play(lastTheme);
     }
     return musicEnabled;
+  },
+
+  /** Read-only view of the active theme (for UI indicators). */
+  currentTheme(): string {
+    return lastTheme;
   },
 
   setVolume(v: number) {
