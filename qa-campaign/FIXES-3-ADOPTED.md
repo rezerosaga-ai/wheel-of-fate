@@ -26,3 +26,17 @@ if (phase === 'waiting') return null;
 - لا return مشروط جديد بعد أي hook في GameRoom أو RoomPage.
 - جميع الـ suites أخضر ×3.
 - نشر على الإنتاج + smoke test.
+<<<<<<< HEAD
+
+## S3-03 (معتمد — HIGH): إصلاح UX-028 — الدخول المباشر للغرفة
+
+**الإجراء:** في `src/app/room/[code]/page.tsx`، guard eject كان يعتمد على `useGameStore.persist.onFinishHydration` الذي لا يُفعَّل دومًا (hydration قد تكتمل قبل subscribe أو تفشل صامتًا). استُبدل بمراقبة نشطة: فحص `localStorage.getItem('wof-player')` متزامنًا عند mount + interval 200ms خلال فترة سماح 5s — eject فقط إذا لم تظهر هوية اللاعب إطلاقًا بعد 5s.
+
+**التحقق بعد التنفيذ (17/08 04:10):**
+- [x] TypeScript نظيف (0 أخطاء)
+- [x] اختبار في متصفح حقيقي: متصفح جديد بدون هوية → eject صحيح إلى `/` ✓
+- [x] اختبار harness: متصفح جديد بهوية صحيحة (`wof-player` بصيغة zustand) → يبقى في `/room/MT67BR` ويستقر URL ✓
+- [x] غرفة التفاهم ظهرت فعليًا في المتصفح: «💔➡️💞 غرفة التفاهم — لاحظنا بعض التوتر… تحدثا بصراحة» ✓
+- [x] الرحلة الكاملة اكتملت (conflict → dialogue ×2 → agree → loveCounter +3 → السؤال التالي) ✓
+=======
+>>>>>>> origin/main
