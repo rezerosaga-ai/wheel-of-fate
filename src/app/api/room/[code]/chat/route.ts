@@ -8,21 +8,17 @@ import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
  * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED)
  * من Neon pooler تحت الحمل المتزامن — توسيع UX-032 إلى chat route.
  */
-async function retryWrap<T>(fn: () => Promise<T>, attempts = 8): Promise<T> {
+async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   let lastErr: unknown = null;
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (err: unknown) {
       lastErr = err;
-      const msg = ((err as Error)?.message || '') + ' ' + (((err as Error)?.cause as Error)?.message || '');
-      const isNet = /ECONNRESET|ECONNREFUSED|connection|too many clients|terminat|unexpected|EPIPE|socket|server closed the connection|Failed query/i.test(msg);
-      if (!isNet || i === attempts - 1) {
-        // تسجيل الخطأ الأصلي الكامل مع err.cause لأغراض التشخيص — HP-BUG-06
-        console.error('retryWrap giving up:', msg);
-        throw err;
-      }
-      await new Promise((res) => setTimeout(res, 300 * Math.pow(1.8, i)));
+      const msg = (err as Error)?.message || '';
+      const isNet = /ECONNRESET|ECONNREFUSED|connection/i.test(msg);
+      if (!isNet || i === attempts - 1) throw err;
+      await new Promise((res) => setTimeout(res, 100 * (i === 0 ? 1 : i === 1 ? 2.5 : 5)));
     }
   }
   throw lastErr;

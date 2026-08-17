@@ -65,19 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Providers session={session}>{children}</Providers>
         <AnalyticsClient />
         {/* Register Service Worker */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then(function(reg) { console.log('SW registered:', reg.scope); })
-                    .catch(function(err) { console.log('SW error:', err); });
-                });
-              }
-            `,
-          }}
-        />
+        <script key="sw-register" type="text/javascript" dangerouslySetInnerHTML={{ __html: "if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(reg) { console.log('SW registered:', reg.scope); }).catch(function(err) { console.log('SW error:', err); }); }); }" }} />
       </body>
     </html>
   );

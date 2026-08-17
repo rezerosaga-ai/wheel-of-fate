@@ -3,30 +3,6 @@ import { db } from '@/db';
 import { rooms, reflections } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
-/**
- * HP-BUG-07 FIX (G-04 امتداد): إعادة محاولة الأخطاء المتقطعة — Reflection جزء
- * أساسي من الرحلة العاطفية ولا يجب أن يفشل بصمت تحت الحمل المتزامن.
- */
-async function retryWrap<T>(fn: () => Promise<T>, attempts = 8): Promise<T> {
-  let lastErr: unknown = null;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      return await fn();
-    } catch (err: unknown) {
-      lastErr = err;
-      const msg = ((err as Error)?.message || '') + ' ' + (((err as Error)?.cause as Error)?.message || '');
-      const isNet = /ECONNRESET|ECONNREFUSED|connection|too many clients|terminat|unexpected|EPIPE|socket|server closed the connection|Failed query/i.test(msg);
-      if (!isNet || i === attempts - 1) {
-        // تسجيل الخطأ الأصلي الكامل مع err.cause لأغراض التشخيص — HP-BUG-06
-        console.error('retryWrap giving up:', msg);
-        throw err;
-      }
-      await new Promise((res) => setTimeout(res, 300 * Math.pow(1.8, i)));
-    }
-  }
-  throw lastErr;
-}
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -42,9 +18,7 @@ export async function POST(
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const [room] = await retryWrap(() =>
-      db.select().from(rooms).where(eq(rooms.code, code)).limit(1)
-    );
+    const [room] = await db.select().from(rooms).where(eq(rooms.code, code)).limit(1);
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
@@ -56,8 +30,8 @@ export async function POST(
     const sessionDate = new Date().toISOString().split('T')[0]!;
 
     // Save reflection (private — only this player can read it)
-    const [ref] = await retryWrap(() =>
-      db.insert(reflections)
+    const [ref] = await db
+      .insert(reflections)
       .values({
         roomCode: code,
         playerId,
@@ -66,8 +40,7 @@ export async function POST(
         topicsFound: [],
         adaptiveQuestionsGenerated: [],
       })
-      .returning()
-    );
+      .returning();
 
     // Try synchronous AI analysis (with timeout fallback)
     let analysis: string | undefined;
@@ -238,18 +211,16 @@ export async function GET(
     const playerId = req.nextUrl.searchParams.get('playerId');
     if (!playerId) return NextResponse.json({ questions: [] });
 
-    const playerReflections = await retryWrap(() =>
-      db
-        .select()
-        .from(reflections)
+    const playerReflections = await db
+      .select()
+      .from(reflections)
       .where(
         and(
           drizzleEq(reflections.roomCode, code),
           drizzleEq(reflections.playerId, playerId)
         )
       )
-      .limit(5)
-    );
+      .limit(5);
 
     const allAdaptive = playerReflections.flatMap(
       (r) => (r.adaptiveQuestionsGenerated as string[]) ?? []
