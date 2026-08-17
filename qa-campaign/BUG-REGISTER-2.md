@@ -71,3 +71,22 @@
 واجهة عبدو أظهرت: «الجولة 3 ❤️ 5 📝 دور عبدو للإجابة» + سؤال dare جديد + 💬 الدردشة.
 =======
 >>>>>>> origin/main
+
+## الجزء السادس: إصلاح G-02 + إثبات Conflict Room النهائي (run22 — 17/08 14:32)
+
+| ID | الخطأ | الحالة | المصدر |
+|---|---|---|---|
+| BUG-006 | loveCounter يتضاعف عند ضغطة agreement ثانية (+3 مرتين) | **أُصلح** — G-02 (2026-08-17): idempotency guard في conflict_agree handler في game-logic.ts، الضغطة الثانية تعيد 400 صريح «تم الاتفاق بالفعل» | conflict_run.py run21 |
+
+### إثبات المسار العاطفي الكامل PASS (غرفة BP3PC8 — 17/08 14:32)
+| الخطوة | النتيجة |
+|---|---|
+| Round 1: question → answer → weak reaction → end_round | cc=1 → spin |
+| Round 2: weak reactions ×2 → end_round | cc=4 ≥ 2 → **Conflict Room** |
+| حوار متناوب conflict_step ×2 | 200/200 |
+| Mutual Agreement | 200 ثم guard 400 |
+| Resolution → question | cc=0، loveCounter=5 (+3 فقط) |
+
+**السلسلة كاملة موثقة:** Question → Answer → Reaction(weak) → Conflict Detection → Conflict Room → Alternating Dialogue → Mutual Agreement → RESOLVED → Love Counter (+3) → Question.
+
+تم الدفع للمستودع rezerosaga-ai/wheel-of-fate فرع fix/ux-030-031-direct-link، commit `07d97ee`.
