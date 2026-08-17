@@ -1,0 +1,36 @@
+{
+ "tests": [
+  {
+   "name": "conflict_room_fast",
+   "status": "PASS",
+   "room_code": "BP3PC8",
+   "phase_obs_0": "spin_start",
+   "phase_obs_1": "spin_question",
+   "phase_obs_2": "question",
+   "answer_sent_by": "ANFAL",
+   "answer_ok": true,
+   "phase_obs_3": "reaction",
+   "weak_by_ANFAL": 200,
+   "endround_by_ANFAL": 200,
+   "phase_obs_4": "spin_category",
+   "phase_obs_5": null,
+   "phase_obs_6": "spin_question",
+   "phase_obs_7": "question",
+   "phase_obs_8": "reaction",
+   "weak_by_ABDO": 200,
+   "endround_by_ABDO": 200,
+   "phase_after_loops": "conflict",
+   "conflictCount_final": 4,
+   "rounds_done": 2,
+   "conflict_entered": true,
+   "dialogue_by_ANFAL": true,
+   "dialogue_by_ABDO": true,
+   "agreed_by_ANFAL": true,
+   "agreed_confirmed": true,
+   "agreed_by_ABDO": false,
+   "conflict_next": true,
+   "phase_after_agree": "question",
+   "loveCounter_after": 5
+  }
+ ]
+}
