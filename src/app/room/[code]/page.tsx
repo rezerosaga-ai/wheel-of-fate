@@ -22,11 +22,54 @@ export default function RoomPage() {
     setMounted(true);
   }, []);
 
+  // UX-028 fix: zustand persist hydrates async — `player` starts null on a cold
+  // load of /room/{code}. Redirecting immediately ejects the player to '/' before
+  // hydration finishes. Check localStorage directly (synchronous, reliable): a
+  // persisted identity means a returning player — never eject them. Only eject
+  // fresh visitors (no persisted identity) after a grace period.
+  const GRACE_MS = 5000;
   useEffect(() => {
     if (!mounted) return;
-    if (!player?.id) {
+    if (player?.id) return; // hydrated identity already present — stay on the room page
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const seen = { replaced: false, cancelled: false };
+    const safeRedirect = () => {
+      if (seen.replaced || seen.cancelled) return;
+      seen.replaced = true;
       router.replace('/');
+    };
+    // Synchronous identity check: a persisted player object means stay put.
+    const hasPersistedIdentity = () => {
+      try {
+        const raw = localStorage.getItem('wof-player');
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        return Boolean(parsed?.state?.player?.id || parsed?.player?.id);
+      } catch {
+        return false;
+      }
+    };
+    if (hasPersistedIdentity()) {
+      seen.cancelled = true;
+      return; // returning player — hydration will surface the identity shortly
     }
+    // Active watch in case hydration lands during the grace period.
+    const interval = setInterval(() => {
+      const st = useGameStore.getState();
+      if (st.player?.id || hasPersistedIdentity()) {
+        seen.cancelled = true;
+        clearInterval(interval);
+      }
+    }, 200);
+    // Fresh visitor with no identity: redirect after grace.
+    timer = setTimeout(() => {
+      const st = useGameStore.getState();
+      if (!st.player?.id && !hasPersistedIdentity()) safeRedirect();
+    }, GRACE_MS);
+    return () => {
+      clearInterval(interval);
+      if (timer) clearTimeout(timer);
+    };
   }, [mounted, player, router]);
 
   if (!mounted) {
