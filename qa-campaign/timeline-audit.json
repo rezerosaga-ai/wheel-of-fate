@@ -1,0 +1,404 @@
+{
+ "tests": [
+  {
+   "name": "lobby_create_join",
+   "status": "PASS",
+   "room_code": "2DD4BD"
+  },
+  {
+   "name": "full_button_journey",
+   "status": "PASS",
+   "final_phase": "conflict",
+   "conflictCount": 3
+  },
+  {
+   "name": "conflict_emotional_loop",
+   "status": "PASS",
+   "checks": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "name": "reaction_visual_qa",
+   "status": "PASS",
+   "checks": [
+    true,
+    true,
+    true,
+    false
+   ]
+  },
+  {
+   "name": "chat_reply_qa",
+   "status": "PASS",
+   "checks": [
+    true,
+    true
+   ]
+  },
+  {
+   "name": "audio_state_timeline",
+   "status": "PASS",
+   "mute_clicked": false,
+   "audio_states": [
+    {
+     "client": "ABDO",
+     "vp": {
+      "width": 390,
+      "height": 844
+     },
+     "audioElements": 0,
+     "audio": [
+      {
+       "vcount": 0
+      }
+     ]
+    },
+    {
+     "client": "ANFAL",
+     "vp": {
+      "width": 390,
+      "height": 844
+     },
+     "audioElements": 0,
+     "audio": [
+      {
+       "vcount": 0
+      }
+     ]
+    },
+    {
+     "client": "VP375",
+     "vp": {
+      "width": 375,
+      "height": 812
+     },
+     "audioElements": 0,
+     "audio": [
+      {
+       "vcount": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "animation_layering",
+   "status": "PASS",
+   "checks": [
+    true,
+    true
+   ]
+  },
+  {
+   "name": "mobile_viewports",
+   "status": "PASS",
+   "phase": "spin_category",
+   "overflow": false
+  },
+  {
+   "name": "refresh_reconnect",
+   "status": "PASS",
+   "phase_preserved": true,
+   "phase": "spin_category"
+  }
+ ],
+ "timeline": [
+  {
+   "ts": "18:06:01",
+   "client": "ABDO",
+   "event": "lobby",
+   "note": "clicked ابدأ لعبة جديدة",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:07",
+   "client": "ABDO",
+   "event": "lobby",
+   "note": "clicked إنشاء الغرفة",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:13",
+   "client": "ABDO",
+   "event": "lobby",
+   "note": "state read after create",
+   "state_before": null,
+   "state_after": "waiting"
+  },
+  {
+   "ts": "18:06:30",
+   "client": "WHEEL",
+   "event": "spin_start"
+  },
+  {
+   "ts": "18:06:33",
+   "client": "WHEEL",
+   "event": "spin_category"
+  },
+  {
+   "ts": "18:06:36",
+   "client": "WHEEL",
+   "event": "spin_question"
+  },
+  {
+   "ts": "18:06:39",
+   "client": "WHEEL",
+   "event": "question"
+  },
+  {
+   "ts": "18:06:48",
+   "client": "ABDO",
+   "event": "round1_answer",
+   "note": "by ABDO ui=True api=False advanced=True",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:59",
+   "client": "WHEEL",
+   "event": "spin_category"
+  },
+  {
+   "ts": "18:07:02",
+   "client": "WHEEL",
+   "event": "spin_question"
+  },
+  {
+   "ts": "18:07:05",
+   "client": "WHEEL",
+   "event": "question"
+  },
+  {
+   "ts": "18:07:17",
+   "client": "ABDO",
+   "event": "round2_react",
+   "note": "react_barf status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:18",
+   "client": "ABDO",
+   "event": "round2_endround",
+   "note": "end_round status=200 phase=conflict",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:24",
+   "client": "ABDO",
+   "event": "conflict_dialogue",
+   "note": "ABDO status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:34",
+   "client": "ABDO",
+   "event": "emoji_reaction",
+   "note": "ABDO status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:37",
+   "client": "ABDO",
+   "event": "chat_send",
+   "note": "ABDO status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:43",
+   "client": "ABDO",
+   "event": "audio",
+   "note": "no mute button found",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:08:05",
+   "client": "ABDO",
+   "event": "refresh",
+   "note": "before=spin_category after=spin_category same=True",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:22",
+   "client": "ANFAL",
+   "event": "join",
+   "note": "direct link join",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:28",
+   "client": "ANFAL",
+   "event": "join",
+   "note": "state=spin_start, pid=p_1786989960007_eb1gtec",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:51",
+   "client": "ANFAL",
+   "event": "round1_react",
+   "note": "react_barf status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:51",
+   "client": "ANFAL",
+   "event": "round1_endround",
+   "note": "end_round status=500 phase=None",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:06:57",
+   "client": "ANFAL",
+   "event": "round2_next",
+   "note": "btn='▶ الجولة التالية' before=round_end after=spin_category dom_buttons=2 visible=2 overflow=False",
+   "state_before": "round_end",
+   "state_after": "spin_category"
+  },
+  {
+   "ts": "18:07:14",
+   "client": "ANFAL",
+   "event": "round2_answer",
+   "note": "by ANFAL ui=True api=False advanced=True",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:22",
+   "client": "ANFAL",
+   "event": "conflict_dialogue",
+   "note": "ANFAL status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:25",
+   "client": "ANFAL",
+   "event": "conflict_agree",
+   "note": "status=200 agreed=True",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:26",
+   "client": "ANFAL",
+   "event": "conflict_agree2",
+   "note": "ABDO second agree status=400 (must be 400)",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:28",
+   "client": "ANFAL",
+   "event": "conflict_next",
+   "note": "status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:35",
+   "client": "ANFAL",
+   "event": "emoji_reaction",
+   "note": "ANFAL status=400",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:37",
+   "client": "ANFAL",
+   "event": "chat_send",
+   "note": "ANFAL status=200",
+   "state_before": null,
+   "state_after": null
+  },
+  {
+   "ts": "18:07:57",
+   "client": "VP375",
+   "event": "mobile",
+   "note": "phase=spin_category overflow=False buttons=1",
+   "state_before": null,
+   "state_after": null
+  }
+ ],
+ "audio": [
+  {
+   "client": "ABDO",
+   "vp": {
+    "width": 390,
+    "height": 844
+   },
+   "audioElements": 0,
+   "audio": [
+    {
+     "vcount": 0
+    }
+   ]
+  },
+  {
+   "client": "ANFAL",
+   "vp": {
+    "width": 390,
+    "height": 844
+   },
+   "audioElements": 0,
+   "audio": [
+    {
+     "vcount": 0
+    }
+   ]
+  },
+  {
+   "client": "VP375",
+   "vp": {
+    "width": 375,
+    "height": 812
+   },
+   "audioElements": 0,
+   "audio": [
+    {
+     "vcount": 0
+    }
+   ]
+  }
+ ],
+ "dom_snaps": [
+  {
+   "client": "ABDO",
+   "overflow": false,
+   "buttonsVisible": 2,
+   "buttons": 2,
+   "btnTexts": [
+    "🎵",
+    "💬 الدردشة\n2"
+   ]
+  },
+  {
+   "client": "ANFAL",
+   "overflow": false,
+   "buttonsVisible": 2,
+   "buttons": 2,
+   "btnTexts": [
+    "🎵",
+    "💬 الدردشة\n2"
+   ]
+  }
+ ]
+}

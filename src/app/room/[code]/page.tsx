@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/useGameStore';
 import WaitingRoom from '@/components/screens/WaitingRoom';
+import RoomJoinScreen from '@/components/screens/RoomJoinScreen';
 import GameRoom from '@/components/screens/GameRoom';
 
 const GAME_PHASES = new Set([
@@ -61,10 +62,12 @@ export default function RoomPage() {
         clearInterval(interval);
       }
     }, 200);
-    // Fresh visitor with no identity: redirect after grace.
+    // UX-031 fix: a fresh visitor arriving via a direct /room/CODE link must NOT be
+    // ejected to home. Show the in-room name entry (RoomJoinScreen) instead. Keep
+    // the grace redirect only as a defensive fallback when no code exists.
     timer = setTimeout(() => {
       const st = useGameStore.getState();
-      if (!st.player?.id && !hasPersistedIdentity()) safeRedirect();
+      if (!st.player?.id && !hasPersistedIdentity() && !code) safeRedirect();
     }, GRACE_MS);
     return () => {
       clearInterval(interval);
@@ -86,7 +89,9 @@ export default function RoomPage() {
     );
   }
 
-  if (!player?.id) return null;
+  // UX-031: direct-link guest (no hydrated player yet) sees the in-room name
+  // entry instead of a blank page or an eject to home.
+  if (!player?.id) return <RoomJoinScreen code={code} />;
 
   const phase = gameState?.phase;
 

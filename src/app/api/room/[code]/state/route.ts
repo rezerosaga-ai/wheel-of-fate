@@ -3,6 +3,27 @@ import { db } from '@/db';
 import { rooms, gameState, chatMessages } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
+/**
+ * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED)
+ * من Neon pooler تحت الحمل المتزامن — إصلاح UX-032.
+ */
+async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastErr: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastErr = err;
+      const msg = (err as Error)?.message || '';
+      const isNet = /ECONNRESET|ECONNREFUSED|connection/i.test(msg);
+      if (!isNet || i === attempts - 1) throw err;
+      // backoff متدرج: 100 → 250 → 500ms
+      await new Promise((res) => setTimeout(res, 100 * (i === 0 ? 1 : i === 1 ? 2.5 : 5)));
+    }
+  }
+  throw lastErr;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -12,35 +33,45 @@ export async function GET(
     const since = req.nextUrl.searchParams.get('since');
     const playerId = req.nextUrl.searchParams.get('playerId');
 
-    const [room] = await db.select().from(rooms).where(eq(rooms.code, code)).limit(1);
+    const [room] = await retryWrap(() =>
+      db.select().from(rooms).where(eq(rooms.code, code)).limit(1)
+    );
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    const [gs] = await db.select().from(gameState).where(eq(gameState.roomCode, code)).limit(1);
+    const [gs] = await retryWrap(() =>
+      db.select().from(gameState).where(eq(gameState.roomCode, code)).limit(1)
+    );
 
     // Get recent chat messages
-    const msgs = await db
-      .select()
-      .from(chatMessages)
-      .where(eq(chatMessages.roomCode, code))
-      .orderBy(desc(chatMessages.createdAt))
-      .limit(50);
+    const msgs = await retryWrap(() =>
+      db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.roomCode, code))
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(50)
+    );
 
     // Update heartbeat
     if (playerId) {
       const now = new Date();
       if (gs) {
         if (playerId === room.player1Id) {
-          await db
-            .update(gameState)
-            .set({ player1LastSeen: now })
-            .where(eq(gameState.roomCode, code));
+          await retryWrap(() =>
+            db
+              .update(gameState)
+              .set({ player1LastSeen: now })
+              .where(eq(gameState.roomCode, code))
+          );
         } else if (playerId === room.player2Id) {
-          await db
-            .update(gameState)
-            .set({ player2LastSeen: now })
-            .where(eq(gameState.roomCode, code));
+          await retryWrap(() =>
+            db
+              .update(gameState)
+              .set({ player2LastSeen: now })
+              .where(eq(gameState.roomCode, code))
+          );
         }
       }
     }

@@ -756,6 +756,10 @@ export function processAction(
     case 'conflict_agree': {
       if (state.phase !== 'conflict') return { updates: {}, error: 'غرفة النزاع غير نشطة' };
       // الاتفاق المتبادل: الزر ظاهر للطرفين بعد حوار كل منهما — أي طرف يمكنه تأكيده
+      // G-02 FIX: idempotency — الاتفاق مرة واحدة فقط، الضغطة الثانية خطأ صريح (لا +3 مكررة)
+      if (state.conflictAgreed ?? false) {
+        return { updates: {}, error: 'تم الاتفاق بالفعل — زر «متابعة السؤال» متاح الآن' };
+      }
       if ((state.conflictDialogueCount ?? 0) < 2) {
         return { updates: {}, error: 'يجب أن يشارك الطرفان في الحوار أولًا' };
       }
