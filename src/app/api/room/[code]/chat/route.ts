@@ -4,6 +4,26 @@ import { rooms, chatMessages } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
 
+/**
+ * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED)
+ * من Neon pooler تحت الحمل المتزامن — توسيع UX-032 إلى chat route.
+ */
+async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastErr: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastErr = err;
+      const msg = (err as Error)?.message || '';
+      const isNet = /ECONNRESET|ECONNREFUSED|connection/i.test(msg);
+      if (!isNet || i === attempts - 1) throw err;
+      await new Promise((res) => setTimeout(res, 100 * (i === 0 ? 1 : i === 1 ? 2.5 : 5)));
+    }
+  }
+  throw lastErr;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -26,7 +46,9 @@ export async function POST(
       return NextResponse.json({ error: 'Message too long' }, { status: 400 });
     }
 
-    const [room] = await db.select().from(rooms).where(eq(rooms.code, code)).limit(1);
+    const [room] = await retryWrap(() =>
+      db.select().from(rooms).where(eq(rooms.code, code)).limit(1)
+    );
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
@@ -36,16 +58,18 @@ export async function POST(
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    const [msg] = await db
-      .insert(chatMessages)
-      .values({
-        roomCode: code,
-        playerId,
-        playerName,
-        content: content.trim(),
-        messageType,
-      })
-      .returning();
+    const [msg] = await retryWrap(() =>
+      db
+        .insert(chatMessages)
+        .values({
+          roomCode: code,
+          playerId,
+          playerName,
+          content: content.trim(),
+          messageType,
+        })
+        .returning()
+    );
 
     notifyRoomUpdate(code);
     return NextResponse.json({ message: msg });
