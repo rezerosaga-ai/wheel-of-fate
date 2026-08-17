@@ -12,3 +12,6 @@
 ## وضع merge (04:35):
 cherry-pick تم commit (f051491 مع todo.md). merge origin/main: صراع واحد فقط — qa-campaign/evidence/abdo_390x844_conflict-abdo.png (add/add، اختلاف بايتات بسيط). الحل: قبول نسخة remote (git checkout --theirs ... أو ours حسب الاتجاه — remote = origin/main). بعد حل التعارض: git add + git commit (merge) + git push origin main (remote URL فيه التوكن ✓).
 الهدف: HEAD local يحتوي UX-028 fix (src/app/room/[code]/page.tsx) + كل التقارير.
+
+## run3 (07:00): T1+T2 PASS ثم dev server على 13000 قُتل (exit 143 SIGTERM أثناء إعادة تطبيق التعديلات) → كل T3-T10 FAIL بـ TargetCrashed/CONNECTION_REFUSED. ليس فشلًا حقيقيًا في اللعبة. T1 lobby_create_join PASS = إصلاح UX-031 سليم (أنفال انضمت عبر الرابط المباشر؟ T1 تستخدم join_room عبر home — لكن T2 PASS = اللعبة تتقدم تلقائيًا لمرحلة question ✅ إثبات اللعبة التلقائية).
+plan: إعادة إطلاق next dev على 13000 ثم run4.
