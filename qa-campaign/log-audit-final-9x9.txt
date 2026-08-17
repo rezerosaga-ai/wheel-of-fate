@@ -1,0 +1,52 @@
+[17:15:01] ABDO: name filled
+[17:15:05] ABDO mood clicked=True
+[17:15:12] ABDO created, pid=p_1786986898346_mts7atx
+[17:15:12] room code = 3MDWUH
+[17:15:27] ANFAL joined, pid=p_1786986898978_gafbnqo
+[17:15:27] T1 lobby_create_join: PASS
+[17:15:39] round1: entering answer section phase=question cpi=1
+[17:15:39] ABDO UI fill OK
+[17:15:45] ABDO UI submit button[type=submit] FAILED: Locator.click: Timeout 6000ms exceeded.
+Call log:
+  - waitin
+[17:15:45] ABDO UI submit get_by_text OK
+[17:15:49] round1: after answer phase=reaction cc=0
+[17:15:53] round1: after answer phase=spin_category cc=2
+[17:15:53] after round1: phase=spin_category
+[17:16:07] round2: entering answer section phase=question cpi=0
+[17:16:07] ANFAL UI fill OK
+[17:16:13] ANFAL UI submit button[type=submit] FAILED: Locator.click: Timeout 6000ms exceeded.
+Call log:
+  - waitin
+[17:16:13] ANFAL UI submit get_by_text OK
+[17:16:17] round2: after answer phase=reaction cc=2
+[17:16:21] round2: after answer phase=conflict cc=4
+[17:16:21] after round2: phase=conflict
+[17:16:22] conflict reached after round2 (cc=4)
+[17:16:22] T2 journey: reached conflict via real UI — PASS
+[17:16:31] T3 conflict loop: PASS loveCounter=5
+[17:16:31] T4 start: phase=question cpi=0 currentAnswer=False reactionDone=False
+[17:16:32] t4 answer: status=200 phase=reaction
+[17:16:34] T4 reaction check: phase=reaction reactionDone=False
+[17:16:35] T4 react ABDO: status=200 err=None phase=round_end
+[17:16:36] T4 react ANFAL: status=400 err=None phase=None
+[17:16:37] T4 after reactions: phase=round_end reactionDone=True loveCounter=6
+[17:16:37] T4 emoji visual: first_ok=True transition=True → PASS
+[17:16:37] T5 chat: sending for ABDO phase=round_end
+[17:16:38] T5 chat: sending for ANFAL phase=round_end
+[17:16:39] T5 chat: PASS (phase=round_end)
+[17:16:45] T6 audio: elements=[{'client': 'ABDO', 'vp': {'width': 390, 'height': 844}, 'audioElements': 0, 'audio': [{'vcount': 0}]}, {'client': 'ANFAL', 'vp': {'width': 390, 'height': 844}, 'audioElements': 0, 'audio': [{'vcount': 0}]}, {'client': 'VP375', 'vp': {'width': 375, 'height': 812}, 'audioElements': 0, 'audio': [{'vcount': 0}]}]
+[17:16:45] T7 layering: overflow=[True, True]
+[17:16:58] T8 mobile 375: phase=spin_category overflow=False
+[17:17:07] T9 refresh: phase preserved=True (spin_category)
+
+===== FULL COUPLE AUDIT SUMMARY =====
+- lobby_create_join: PASS
+- full_button_journey: PASS
+- conflict_emotional_loop: PASS
+- reaction_visual_qa: PASS
+- chat_reply_qa: PASS
+- audio_state_timeline: PASS
+- animation_layering: PASS
+- mobile_viewports: PASS
+- refresh_reconnect: PASS
