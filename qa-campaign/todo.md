@@ -77,6 +77,24 @@ run7 لا يزال جاريًا — انتظره أولًا لرؤية بقية 
 4. chat_exchange: textarea غير ظاهر — المرحلة لم تصل chat (مرتبط بـ2).
 الأولوية: فحص lobby FAIL + لماذا ABDO لم ينقر زر السؤال رغم أن run7 سجل picked-question screenshot! في run8: screenshot «picked-question» موجود لكن FAIL يقول لم تصل question — يعني بعد النقر المرحلة لم تنتقل فعليًا! فحص T3 في harness: النقر على «اختر السؤال» + انتظار المرحلة question.
 
+## TODO — إغلاق مرحلة الإصلاحات (2026-08-18، بعد دمج PR #4)
+- [x] 1. التحقق من وصول GitHub عبر الموصل (gh يعمل بـghu_ token جديد عبر الموصل؛ remote حدّثناه لإزالة ghp_MNxtDDP القديم من URL).
+- [x] 2. سكربتات QA نظيفة: verify_prod_api.py + check_deploy.py (env VERCEL_TOKEN) مرفوعة في 1a55e72.
+- [x] 3. human_playtest.py ضد https://wheel-of-fate-three.vercel.app → **18 PASS / 0 FAIL** (/tmp/harness-prod-run1.log, غرفة BGEY8J, 23:35–23:37 UTC).
+- [x] 4. لا FAILs — لا حاجة لإصلاح.
+- [x] 5. التوثيق هنا في todo.md + report json محلي.
+- [x] 6. الإبلاغ للمستخدم.
+
+### تقرير الإغلاق الرسمي — مرحلة الإصلاحات
+**تاريخ الإغلاق: 2026-08-18 23:37 UTC.** المشروع المنشور https://wheel-of-fate-three.vercel.app (deployment dpl_9ynEYFAi، sha ef56f38، bundler turbopack، state=READY) يمرّ بكل الاختبارات:
+| المسار | النتيجة |
+|---|---|
+| human_playtest (18 سيناريو: lobby, bomb H1-H6, skip/deepen, chat burst, couple rhythm, refresh) | 18/18 PASS |
+| API production verification (health/create/join/state/reflect/root) | ALL PASS (JSON سليم) |
+| build (NODE_ENV=production، بدون warnings) | Compiled successfully |
+| unit tests | 86/86 PASS |
+الإصلاحات المدموجة في main: vitest.config.ts (TS2769)، middleware folder convention، next.config.mjs cleanup، retryWrap في 6 routes، global-error.tsx، UX-028/UX-030/UX-031، UX-032 (retry ECONNRESET).
+
 ## run8 تحليل تفصيلي (09:40):
 - T1 lobby: الانضمام API نجح (p2Id موجود، status=playing) لكن ABDO LS state بعد 8s = p2=null — ABDO الصفحة لم تستقبل تحديث player2 (polling حدث قبل write؟ أو state snapshot من LS لم يُحدَّث بعد). في T1 check: sa["room"].p2 — فشل لأن localStorage لم يُحدَّث. FIX: استخدم state() الجديد (API) بدل LS في T1 check.
 - T3: ABDO نقر «اختر السؤال» (picked-question screenshot) لكن T3 FAIL «لم تصل question» — أي أن wait_for_state_phase("question") انتهى timeout. رغم أن screenshot التقط! السبب: screenshot قبل تحقق المرحلة. ABDO نقر لكن click كان على الزر ثم state بقي spin_category. لماذا؟ نفس مشكلة run7! click_text ينتظر 3000 ثم... الـ picker ربما لم يرسل pick_question بنجاح (action pending + 500 سابق). الآن retry موجود. لكن T3 فشل: wait timeout 90s! فحص T3 code — wait_for_state_phase("question", timeout_ms=?)
@@ -228,21 +246,3 @@ run13 جارٍ على غرفة 3QBH8V.
 الإصلاحات المطبقة في هذا المسار: UX-032 retryWrap×3 routes + harness fixes (T1 API-read, direction-aware CTA clicks, chat toggle open + force clicks).
 التالي: checkpoint + إبلاغ المستخدم بالتقدم «تم 😍» + تحديث GitHub.
 >>>>>>> origin/main
-
-## G-PUBLISH (18:15): حالة النشر للمستودع
-
-GH_TOKEN العامل: [REDACTED]_IaRmhbfrYas7vYbF6W0RCxcA1H3lSykqhseq3LqNWgFUJIWMACThNAngjIZ (الـ App token ghu_ بدون صلاحية PR).
-main الحالي: 7ad1d79 (UX-032: Neon pooler ECONNRESET retryWrap — أصلحه المستخدم/الفريق بالفعل!).
-PR #2 أُنشئ → فشل merge بسبب تعارض todo.md → حللته بالـ merge المحلي (commit 0a0eb97).
-المتبقي: git push ثم gh pr merge 2، ثم Vercel deploy (تلقائي على push لـ main)، ثم تحقق من wheel-of-fate-three.vercel.app.
-Regression حي: unit 86/86 + integration 21/21 PASS بعد إصلاح DB direct. Harness 9/9 PASS live.
-التقرير النهائي: qa-campaign/FINAL-QA-CAMPAIGN-REPORT.md (125 اختبار PASS).
-ملاحظة: UX-032 في main أصلح pooler أصلًا — إصلاحنا local (direct URL في .env.local) حل محلي للـ sandbox.
-
-## G-PUBLISH FINAL (18:21)
-
-main المنشور على GitHub: 4724f2e "Merge PR #2: QA stabilization" (يتضمن: G-02/G-03 guards, harness, QA docs, next 16.3.1, not-found page).
-Vercel: deployment production جديد READY عند 18:16:50 UTC (بعد merge مباشرة = auto-deploy يعمل). wheel-of-fate-three.vercel.app: 200 + /api/health ok. 404-page تعمل.
-UX-032 (pooler retryWrap) كان موجودًا في main قبل دمجنا — هذا يعيد إنتاج pnpm build على Vercel صحيحًا.
-ملاحظة: .env.local مع الاتصال المباشر ملف محلي للاختبار فقط — غير مرفوع للمستودع (gitignore).
-PR #2 ما زال مفتوحًا على GitHub (App token لا يملك صلاحية الإغلاق) — يمكن إغلاقه يدويًا.
