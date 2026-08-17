@@ -1,13 +1,14 @@
-import { defineConfig } from 'vitest/config';
+// إصلاح بناء Vercel 2026-08-18:
+// vitest 4 يصدّر defineConfig بـ5 overloads؛ overload الأخير (ViteUserConfigExport)
+// يفسّر setupFiles كخاصية vite مجهولة → TS2769 "object literal may only specify
+// known properties" في بيئة Vercel. الحل: typing صريح عبر UserConfig بدلاً من
+// الاعتماد على overload resolution، مع satisfies لضمان الاتساق.
 import path from 'path';
+import type { ViteUserConfig } from 'vitest/config';
 
-export default defineConfig({
+const config: ViteUserConfig = {
   test: {
     environment: 'jsdom',
-    pool: 'threads',
-    poolOptions: { threads: { isolate: true } },
-    fileParallelism: false,
-    retry: 2,
     globals: true,
     setupFiles: ['./src/tests/setup.ts'],
     coverage: {
@@ -21,4 +22,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-});
+};
+
+export default config;
