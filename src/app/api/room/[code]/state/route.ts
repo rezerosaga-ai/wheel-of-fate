@@ -4,21 +4,27 @@ import { rooms, gameState, chatMessages } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 /**
- * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED)
+ * retryWrap: يعيد محاولة عمليات DB عند الأخطاء المتقطعة (ECONNRESET/ECONNREFUSED/connection)
  * من Neon pooler تحت الحمل المتزامن — إصلاح UX-032.
+ * HP-BUG-01 (G-04): أُضيفت أنماط transient إضافية مكشوفة من human_playtest:
+ * "too many clients" / "terminat" / "unexpected" / "EPIPE" / "socket" —
+ * polling المستمر لا يجب أن يفشل 500 صامتًا عند انقطاع مؤقت.
  */
-async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+async function retryWrap<T>(fn: () => Promise<T>, attempts = 8): Promise<T> {
   let lastErr: unknown = null;
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (err: unknown) {
       lastErr = err;
-      const msg = (err as Error)?.message || '';
-      const isNet = /ECONNRESET|ECONNREFUSED|connection/i.test(msg);
-      if (!isNet || i === attempts - 1) throw err;
-      // backoff متدرج: 100 → 250 → 500ms
-      await new Promise((res) => setTimeout(res, 100 * (i === 0 ? 1 : i === 1 ? 2.5 : 5)));
+      const msg = ((err as Error)?.message || '') + ' ' + (((err as Error)?.cause as Error)?.message || '');
+      const isNet = /ECONNRESET|ECONNREFUSED|connection|too many clients|terminat|unexpected|EPIPE|socket|server closed the connection|Failed query/i.test(msg);
+      if (!isNet || i === attempts - 1) {
+        // تسجيل الخطأ الأصلي الكامل مع err.cause لأغراض التشخيص — HP-BUG-06
+        console.error('retryWrap giving up:', msg);
+        throw err;
+      }
+      await new Promise((res) => setTimeout(res, 300 * Math.pow(1.8, i)));
     }
   }
   throw lastErr;

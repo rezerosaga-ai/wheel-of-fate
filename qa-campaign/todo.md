@@ -228,3 +228,21 @@ run13 جارٍ على غرفة 3QBH8V.
 الإصلاحات المطبقة في هذا المسار: UX-032 retryWrap×3 routes + harness fixes (T1 API-read, direction-aware CTA clicks, chat toggle open + force clicks).
 التالي: checkpoint + إبلاغ المستخدم بالتقدم «تم 😍» + تحديث GitHub.
 >>>>>>> origin/main
+
+## G-PUBLISH (18:15): حالة النشر للمستودع
+
+GH_TOKEN العامل: [REDACTED]_IaRmhbfrYas7vYbF6W0RCxcA1H3lSykqhseq3LqNWgFUJIWMACThNAngjIZ (الـ App token ghu_ بدون صلاحية PR).
+main الحالي: 7ad1d79 (UX-032: Neon pooler ECONNRESET retryWrap — أصلحه المستخدم/الفريق بالفعل!).
+PR #2 أُنشئ → فشل merge بسبب تعارض todo.md → حللته بالـ merge المحلي (commit 0a0eb97).
+المتبقي: git push ثم gh pr merge 2، ثم Vercel deploy (تلقائي على push لـ main)، ثم تحقق من wheel-of-fate-three.vercel.app.
+Regression حي: unit 86/86 + integration 21/21 PASS بعد إصلاح DB direct. Harness 9/9 PASS live.
+التقرير النهائي: qa-campaign/FINAL-QA-CAMPAIGN-REPORT.md (125 اختبار PASS).
+ملاحظة: UX-032 في main أصلح pooler أصلًا — إصلاحنا local (direct URL في .env.local) حل محلي للـ sandbox.
+
+## G-PUBLISH FINAL (18:21)
+
+main المنشور على GitHub: 4724f2e "Merge PR #2: QA stabilization" (يتضمن: G-02/G-03 guards, harness, QA docs, next 16.3.1, not-found page).
+Vercel: deployment production جديد READY عند 18:16:50 UTC (بعد merge مباشرة = auto-deploy يعمل). wheel-of-fate-three.vercel.app: 200 + /api/health ok. 404-page تعمل.
+UX-032 (pooler retryWrap) كان موجودًا في main قبل دمجنا — هذا يعيد إنتاج pnpm build على Vercel صحيحًا.
+ملاحظة: .env.local مع الاتصال المباشر ملف محلي للاختبار فقط — غير مرفوع للمستودع (gitignore).
+PR #2 ما زال مفتوحًا على GitHub (App token لا يملك صلاحية الإغلاق) — يمكن إغلاقه يدويًا.

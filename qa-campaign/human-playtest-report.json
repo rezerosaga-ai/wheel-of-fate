@@ -1,0 +1,243 @@
+{
+  "results": [
+    {
+      "test": "setup_join",
+      "status": "PASS",
+      "detail": "ABDO أنشأ + ANFAL انضمت بالرابط المباشر"
+    },
+    {
+      "test": "H1_bomb_visible_for_answerer",
+      "status": "PASS",
+      "detail": "أدوات المجيب: [{'text': '💣\\nقنبلة\\n1', 'disabled': False}, {'text': '⏭\\nتخطّي\\n3', 'disabled': False}, {'text': '🔍\\nتعمّق\\n2', 'disabled': False}, {'text': '😂\\nلا تضحك\\n1', 'disabled': False}]"
+    },
+    {
+      "test": "H1_bomb_redirects_to_asker",
+      "status": "PASS",
+      "detail": "bombRedirect=0 status=200 msg=None"
+    },
+    {
+      "test": "H1_asker_answers_after_bomb",
+      "status": "PASS",
+      "detail": "asker=200 answerer_block=400 (يجب 400)"
+    },
+    {
+      "test": "H2_setup_question",
+      "status": "PASS",
+      "detail": "وصلنا لسؤال جديد: round=2"
+    },
+    {
+      "test": "H2_asker_cannot_bomb",
+      "status": "PASS",
+      "detail": "status=400 err='القنبلة للمجيب فقط — أنت السائل' (يجب 400 مع رسالة)"
+    },
+    {
+      "test": "H2_double_bomb_rejected",
+      "status": "PASS",
+      "detail": "first=200 second=400"
+    },
+    {
+      "test": "H2_double_click_no_duplicate",
+      "status": "PASS",
+      "detail": "phase=reaction (يجب انتقال واحد فقط)"
+    },
+    {
+      "test": "H2_empty_chat_rejected",
+      "status": "PASS",
+      "detail": "status=400 (يجب 400)"
+    },
+    {
+      "test": "H3_skip_tool",
+      "status": "PASS",
+      "detail": "status=200 err='None'"
+    },
+    {
+      "test": "H3_skip_advances_round",
+      "status": "PASS",
+      "detail": "phase after skip=question"
+    },
+    {
+      "test": "H3_deepen_tool",
+      "status": "PASS",
+      "detail": "status=200 err='None'"
+    },
+    {
+      "test": "H4_chat_during_play_allowed",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "test": "H4_rapid_chat_burst",
+      "status": "PASS",
+      "detail": "statuses=[200, 200, 200]"
+    },
+    {
+      "test": "H4_early_reaction_rejected",
+      "status": "PASS",
+      "detail": "status=400 (يجب 400)"
+    },
+    {
+      "test": "H5_couple_rhythm",
+      "status": "PASS",
+      "detail": "ABDO طويل=200 ANFAL قصير=200"
+    },
+    {
+      "test": "H6_bomb_persists_after_refresh",
+      "status": "PASS",
+      "detail": "before=1 after=1 phase=question"
+    },
+    {
+      "test": "H6_asker_answers_post_refresh",
+      "status": "PASS",
+      "detail": "answer=200 phase=reaction bombRedirect بعد=None"
+    }
+  ],
+  "summary": {
+    "pass": 18,
+    "fail": 0,
+    "total": 18
+  },
+  "timelines": {
+    "ABDO": [
+      {
+        "ts": "21:12:57",
+        "client": "ABDO",
+        "event": "h1",
+        "note": "tools=[{'text': '💣\\nقنبلة\\n1', 'disabled': False}, {'text': '⏭\\nتخطّي\\n3', 'disabled': False}, {'text': '🔍\\nتعمّق\\n2', 'disabled': False}, {'text': '😂\\nلا تضحك\\n1', 'disabled': False}]"
+      },
+      {
+        "ts": "21:12:58",
+        "client": "ABDO",
+        "event": "h1",
+        "note": "use_bomb by ABDO: status=200 error=None"
+      },
+      {
+        "ts": "21:13:17",
+        "client": "ABDO",
+        "event": "h2a",
+        "note": "asker bomb: 400 error=القنبلة للمجيب فقط — أنت السائل"
+      },
+      {
+        "ts": "21:13:55",
+        "client": "ABDO",
+        "event": "h2c",
+        "note": "api double-click: 200/200"
+      },
+      {
+        "ts": "21:13:58",
+        "client": "ABDO",
+        "event": "h2c",
+        "note": "double-click: phase=reaction"
+      },
+      {
+        "ts": "21:14:03",
+        "client": "ABDO",
+        "event": "h2d",
+        "note": "empty chat: 400"
+      },
+      {
+        "ts": "21:14:18",
+        "client": "ABDO",
+        "event": "h3",
+        "note": "use_skip: 200 err=None"
+      },
+      {
+        "ts": "21:14:19",
+        "client": "ABDO",
+        "event": "h3",
+        "note": "use_deepen: 200 err=None"
+      },
+      {
+        "ts": "21:14:20",
+        "client": "ABDO",
+        "event": "h4",
+        "note": "chat during reaction: 200"
+      },
+      {
+        "ts": "21:14:26",
+        "client": "ABDO",
+        "event": "h4",
+        "note": "out-of-time reaction: 400 err=التقييم غير متاح حاليًا — لا يوجد إجابة لتقييمها"
+      },
+      {
+        "ts": "21:14:58",
+        "client": "ABDO",
+        "event": "h5",
+        "note": "romantic_long=200 shy_reply=200"
+      },
+      {
+        "ts": "21:15:21",
+        "client": "ABDO",
+        "event": "h6",
+        "note": "refill bombs via DB: room=4C88ZQ"
+      },
+      {
+        "ts": "21:15:26",
+        "client": "ABDO",
+        "event": "h6",
+        "note": "bombRedirect قبل refresh=1 بعد=1 phase=question"
+      },
+      {
+        "ts": "21:15:29",
+        "client": "ABDO",
+        "event": "done",
+        "note": "campaign finished"
+      }
+    ],
+    "ANFAL": [
+      {
+        "ts": "21:13:00",
+        "client": "ANFAL",
+        "event": "h1",
+        "note": "asker answer after bomb: 200"
+      },
+      {
+        "ts": "21:13:04",
+        "client": "ANFAL",
+        "event": "h1",
+        "note": "react=200 end_round=200"
+      },
+      {
+        "ts": "21:13:19",
+        "client": "ANFAL",
+        "event": "h2b",
+        "note": "double bomb: 200 / 400"
+      },
+      {
+        "ts": "21:14:00",
+        "client": "ANFAL",
+        "event": "h2c",
+        "note": "cleanup react: 200"
+      },
+      {
+        "ts": "21:14:15",
+        "client": "ANFAL",
+        "event": "conflict",
+        "note": "conflict resolved in 1 steps"
+      },
+      {
+        "ts": "21:14:22",
+        "client": "ANFAL",
+        "event": "h4",
+        "note": "burst chat: [200, 200, 200]"
+      },
+      {
+        "ts": "21:14:42",
+        "client": "ANFAL",
+        "event": "h5",
+        "note": "react_love=200 end=200"
+      },
+      {
+        "ts": "21:15:22",
+        "client": "ANFAL",
+        "event": "h6",
+        "note": "use_bomb status=200 err=None gs={\"id\": 3279, \"roomCode\": \"4C88ZQ\", \"currentPlayerIdx\": 0, \"roundNumber\": 5, \"phase\": \"question\", \"currentCategory\": \"love\", \"currentQuestionId\": 141, \"currentAnswer\": null, \"curren"
+      },
+      {
+        "ts": "21:15:29",
+        "client": "ANFAL",
+        "event": "done",
+        "note": "campaign finished"
+      }
+    ]
+  }
+}

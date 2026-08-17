@@ -358,6 +358,14 @@ export function processAction(
     return processAction({ type: 'submit_reaction', playerId: action.playerId, reactionType: 'surprised', points: 2 }, state, room);
   }
   if (action.type === 'end_round') {
+    // BUG-027 FIX (UX-032): إن كان round لا يزال في طور reaction فإن end_round
+    // ينتقل إلى round_end أولًا بدل النجاح الصامت (updates={}) الذي كان يُعلّق
+    // round كاملًا — المصدر الرئيسي لـ dead-end في الرحلة الثنائية.
+    if (state.phase === 'reaction') {
+      // إن لم يُكمل صاحب الدور reactionDone بعد، نُنهي الجولة فورًا: round عالق
+      // لا يساوي جلسة جميلة — لكن weak emoji لا تُحسب هنا (لم يوجد تقييم رسمي)
+      return { updates: { phase: 'round_end', updatedAt: now } as Partial<GameStateData> };
+    }
     // E2: نقاط النزاع تُحسب من آخر إيموجي ردٍّ ضُعف (الواجهة لا تفرّق تصنيفًا)
     const WEAK_REACTIONS_TYPES = ['barf', 'cold', 'surprised'];
     const WEAK_FROM_EMOJI = ['😢', '🥶', '😲'];

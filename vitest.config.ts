@@ -4,6 +4,10 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    pool: 'threads',
+    poolOptions: { threads: { isolate: true } },
+    fileParallelism: false,
+    retry: 2,
     globals: true,
     setupFiles: ['./src/tests/setup.ts'],
     coverage: {
