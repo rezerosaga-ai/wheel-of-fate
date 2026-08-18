@@ -8,6 +8,8 @@
  * 3. خطأ منطقي عادي (Postgres constraint) → يرمي فورًا (لا retry يخفيه).
  * 4. AggregateError يحتوي خطأ منطقي فقط → يرمي فورًا.
  */
+import { describe, it, expect } from 'vitest';
+
 function netErrorSignature(err: unknown): boolean {
   let chain: unknown = err;
   const seen = new Set<unknown>();
