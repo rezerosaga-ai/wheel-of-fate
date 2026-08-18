@@ -13,7 +13,7 @@
     {
       "test": "H1_bomb_redirects_to_asker",
       "status": "PASS",
-      "detail": "bombRedirect=0 status=200 msg=None"
+      "detail": "bombRedirect=1 status=200 msg=None"
     },
     {
       "test": "H1_asker_answers_after_bomb",
@@ -83,7 +83,7 @@
     {
       "test": "H6_bomb_persists_after_refresh",
       "status": "PASS",
-      "detail": "before=1 after=1 phase=question"
+      "detail": "before=0 after=0 phase=question"
     },
     {
       "test": "H6_asker_answers_post_refresh",
@@ -134,85 +134,103 @@
   "timelines": {
     "ABDO": [
       {
-        "ts": "05:55:46",
+        "ts": "07:41:42",
+        "client": "ABDO",
+        "event": "pass_age",
+        "note": "gate visible — clicking"
+      },
+      {
+        "ts": "07:41:43",
+        "client": "ABDO",
+        "event": "pass_age",
+        "note": "passed — start btn visible"
+      },
+      {
+        "ts": "07:42:13",
         "client": "ABDO",
         "event": "h1",
         "note": "tools=[{'text': '💣\\nقنبلة\\n1', 'disabled': False}, {'text': '⏭\\nتخطّي\\n3', 'disabled': False}, {'text': '🔍\\nتعمّق\\n2', 'disabled': False}, {'text': '😂\\nلا تضحك\\n1', 'disabled': False}]"
       },
       {
-        "ts": "05:55:46",
+        "ts": "07:42:14",
         "client": "ABDO",
         "event": "h1",
-        "note": "use_bomb by ABDO: status=200 error=None"
+        "note": "use_bomb by ANFAL: status=200 error=None"
       },
       {
-        "ts": "05:55:59",
+        "ts": "07:42:15",
         "client": "ABDO",
-        "event": "h2a",
-        "note": "asker bomb: 400 error=القنبلة للمجيب فقط — أنت السائل"
+        "event": "h1",
+        "note": "asker answer after bomb: 200"
       },
       {
-        "ts": "05:56:21",
+        "ts": "07:42:19",
+        "client": "ABDO",
+        "event": "h1",
+        "note": "react=200 end_round=200"
+      },
+      {
+        "ts": "07:42:28",
+        "client": "ABDO",
+        "event": "h2b",
+        "note": "double bomb: 200 / 400"
+      },
+      {
+        "ts": "07:42:51",
         "client": "ABDO",
         "event": "h2c",
-        "note": "api double-click: 200/200"
+        "note": "cleanup react: 200"
       },
       {
-        "ts": "05:56:23",
-        "client": "ABDO",
-        "event": "h2c",
-        "note": "double-click: phase=reaction"
-      },
-      {
-        "ts": "05:56:26",
+        "ts": "07:42:53",
         "client": "ABDO",
         "event": "h2d",
         "note": "empty chat: 400"
       },
       {
-        "ts": "05:56:40",
+        "ts": "07:43:05",
         "client": "ABDO",
-        "event": "h3",
-        "note": "use_skip: 200 err=None"
+        "event": "conflict",
+        "note": "conflict resolved in 1 steps"
       },
       {
-        "ts": "05:56:42",
-        "client": "ABDO",
-        "event": "h3",
-        "note": "use_deepen: 200 err=None"
-      },
-      {
-        "ts": "05:56:42",
+        "ts": "07:43:09",
         "client": "ABDO",
         "event": "h4",
         "note": "chat during reaction: 200"
       },
       {
-        "ts": "05:56:44",
+        "ts": "07:43:11",
         "client": "ABDO",
         "event": "h4",
         "note": "out-of-time reaction: 400 err=التقييم غير متاح حاليًا — لا يوجد إجابة لتقييمها"
       },
       {
-        "ts": "05:56:51",
+        "ts": "07:43:16",
+        "client": "ABDO",
+        "event": "h5",
+        "note": "react_love=200 end=200"
+      },
+      {
+        "ts": "07:43:18",
         "client": "ABDO",
         "event": "h5",
         "note": "romantic_long=200 shy_reply=200"
       },
       {
-        "ts": "05:56:57",
+        "ts": "07:43:24",
         "client": "ABDO",
         "event": "h6",
-        "note": "refill bombs via DB: room=2ERXS4"
+        "note": "refill bombs via DB: room=S7T99X"
       },
       {
-        "ts": "05:57:02",
+        "ts": "07:43:25",
         "client": "ABDO",
         "event": "h6",
-        "note": "bombRedirect قبل refresh=1 بعد=1 phase=question"
+        "note": "use_bomb status=200 err=None gs={\"id\": 3304, \"roomCode\": \"S7T99X\", \"currentPlayerIdx\": 1, \"roundNumber\": 5, \"phase\": \"question\", \"currentCategory\": \"personality\", \"currentQuestionId\": 50, \"currentAnswer\": null, \""
       },
       {
-        "ts": "05:57:08",
+        "ts": "07:43:36",
         "client": "ABDO",
         "event": "done",
         "note": "campaign finished"
@@ -220,79 +238,85 @@
     ],
     "ANFAL": [
       {
-        "ts": "05:55:48",
+        "ts": "07:41:54",
         "client": "ANFAL",
-        "event": "h1",
-        "note": "asker answer after bomb: 200"
+        "event": "pass_age",
+        "note": "gate visible — clicking"
       },
       {
-        "ts": "05:55:52",
+        "ts": "07:41:55",
         "client": "ANFAL",
-        "event": "h1",
-        "note": "react=200 end_round=200"
+        "event": "pass_age",
+        "note": "passed — start btn visible"
       },
       {
-        "ts": "05:56:01",
+        "ts": "07:42:27",
         "client": "ANFAL",
-        "event": "h2b",
-        "note": "double bomb: 200 / 400"
+        "event": "h2a",
+        "note": "asker bomb: 400 error=القنبلة للمجيب فقط — أنت السائل"
       },
       {
-        "ts": "05:56:24",
+        "ts": "07:42:48",
         "client": "ANFAL",
         "event": "h2c",
-        "note": "cleanup react: 200"
+        "note": "api double-click: 200/200"
       },
       {
-        "ts": "05:56:38",
+        "ts": "07:42:50",
         "client": "ANFAL",
-        "event": "conflict",
-        "note": "conflict resolved in 1 steps"
+        "event": "h2c",
+        "note": "double-click: phase=reaction"
       },
       {
-        "ts": "05:56:44",
+        "ts": "07:43:07",
+        "client": "ANFAL",
+        "event": "h3",
+        "note": "use_skip: 200 err=None"
+      },
+      {
+        "ts": "07:43:09",
+        "client": "ANFAL",
+        "event": "h3",
+        "note": "use_deepen: 200 err=None"
+      },
+      {
+        "ts": "07:43:10",
         "client": "ANFAL",
         "event": "h4",
         "note": "burst chat: [200, 200, 200]"
       },
       {
-        "ts": "05:56:49",
-        "client": "ANFAL",
-        "event": "h5",
-        "note": "react_love=200 end=200"
-      },
-      {
-        "ts": "05:56:58",
+        "ts": "07:43:29",
         "client": "ANFAL",
         "event": "h6",
-        "note": "use_bomb status=200 err=None gs={\"id\": 3286, \"roomCode\": \"2ERXS4\", \"currentPlayerIdx\": 0, \"roundNumber\": 5, \"phase\": \"question\", \"currentCategory\": \"personality\", \"currentQuestionId\": 443, \"currentAnswer\": null, "
+        "note": "bombRedirect قبل refresh=0 بعد=0 phase=question"
       },
       {
-        "ts": "05:57:07",
+        "ts": "07:43:34",
         "client": "ANFAL",
         "event": "h7",
         "note": "signin loaded, google button='الدخول بـ Google'"
       },
       {
-        "ts": "05:57:07",
+        "ts": "07:43:34",
         "client": "ANFAL",
         "event": "h7",
         "note": "providers status=200 google.id=google type=oidc"
       },
       {
-        "ts": "05:57:07",
+        "ts": "07:43:35",
         "client": "ANFAL",
         "event": "h7",
         "note": "csrf obtained=True"
       },
       {
-        "ts": "05:57:08",
+        "ts": "07:43:36",
         "client": "ANFAL",
         "event": "h7",
         "note": "POST signin/google: 302 → https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=549507574180-l6f cap=True err="
       },
       {
-        "ts": "05:57:08",
+        "ts": "07:43:36",
         "client": "ANFAL",
         "event": "done",
         "note": "campaign finished"

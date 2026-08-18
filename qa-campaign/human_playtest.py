@@ -96,8 +96,20 @@ class H:
         self.page.on("console", lambda m: self.console_errors.append(m.text) if m.type == "error" else None)
         await self.page.goto(BASE + '/', wait_until="domcontentloaded", timeout=40000)
     async def pass_age(self):
-        try: await self.page.get_by_text("نعم", exact=False).first.click(timeout=4000); await self.page.wait_for_timeout(500)
-        except Exception: pass
+        # بوابة العمر تظهر بعد hydration (قد تستغرق 5-10s على الإنتاج) — إعادة محاولة 3 مرات
+        for _i in range(3):
+            try:
+                await self.page.get_by_text("نعم، أنا أكبر من").wait_for(state="visible", timeout=20000)
+                self.ev("pass_age", "gate visible — clicking")
+                await self.page.get_by_text("نعم", exact=False).first.click(timeout=4000)
+                await self.page.wait_for_timeout(1500)  # 350ms exit transition + hydration buffer
+                if await self.page.get_by_text("ابدأ لعبة جديدة").count():
+                    self.ev("pass_age", "passed — start btn visible")
+                    return
+                self.ev("pass_age", "start btn missing after click — retry")
+                await self.page.wait_for_timeout(2000)
+            except Exception as e:
+                self.ev("pass_age", f"attempt failed: {str(e)[:80]}")
     async def snap(self, tag):
         try: await self.page.screenshot(path=f"{EVID}/{self.name.lower()}_{tag}.png")
         except Exception: pass
@@ -143,7 +155,10 @@ class H:
 async def create_and_join(abdo, anfal):
     """UI حقيقي: ABDO ينشئ، ANFAL تنضم بالرابط المباشر."""
     await abdo.pass_age()
-    await abdo.page.get_by_text("ابدأ لعبة جديدة").click(timeout=10000)
+    url_before = abdo.page.url
+    await abdo.page.get_by_text("ابدأ لعبة جديدة").wait_for(state="visible", timeout=30000)
+    log(f"ABDO start btn visible (url={url_before})")
+    await abdo.page.get_by_text("ابدأ لعبة جديدة").click(timeout=15000)
     try: await abdo.page.locator("input").first.fill("عبدو", timeout=8000)
     except Exception: log("ABDO name fill FAILED")
     await abdo.page.wait_for_timeout(400)
