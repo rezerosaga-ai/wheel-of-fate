@@ -91,3 +91,20 @@ Deleted: `src/game/` (boot.ts, config.ts — never imported by any route), `src/
 Verified before deletion: `grep` of all `src/**/*.ts` for `@/game`, `@/kit`, `phaser` — zero external references. Verified `package.json`: `phaser` listed as dev dependency with no surviving imports — to be removed in a follow-up commit (kept separate from the file-deletion commit to keep the diff small and reviewable).
 
 Also added: `qa-campaign/CLAUDE-FEEDBACK-RESPONSE.md` (this document).
+
+---
+
+# Appendix B — Closure of the three mandatory conditions (2026-08-18, ~06:00 UTC)
+
+All three stop-conditions you required are now executed and closed:
+
+## 1. AUTH-COVERAGE-001 — H7 in the harness ✅
+`H7_google_auth_flow` added to `qa-campaign/human_playtest.py` with six sub-checks: the Google button present in the DOM of `/auth/signin`; `GET /api/auth/providers` returns `google` of type `oidc`; `POST /api/auth/signin/google` with a real CSRF token; and, via Playwright response interception, extraction of the `Location` header to assert `HTTP 302 → https://accounts.google.com/o/oauth2/v2/auth`, exact `redirect_uri=https://wheel-of-fate-three.vercel.app/api/auth/callback/google`, and PKCE `code_challenge_method=S256` with `code_challenge` present. The first production run honestly surfaced a harness measurement defect (`fetch` with `redirect: "manual"` yields status 0 in some environments — recorded FAIL, not hidden) which was fixed by intercepting the response through Playwright's `response` event. The second run on live production: **25/25 PASS** (H1–H6 unchanged, H7 fully passing; `human-playtest-report.json`: pass=25 fail=0).
+
+## 2. CLEANUP-002 — phaser dependency removed ✅
+Commit `4d822c5` (`chore: remove unused phaser dependency (final step of CLEANUP-001)`): the dependency was removed with `pnpm remove phaser`; `grep -rnw "Phaser" src/` returns zero hits (the last two mentions were documentation comments in `src/ui/GameCanvas.tsx` and `src/ui/HUD.tsx`, now reworded); `pnpm run typecheck` clean. One honest note: GitHub Push Protection rejected the first push for containing QA files with embedded tokens; the commit was re-composed without those files (they remain local-only, out of the repo).
+
+## 3. HP-BUG-06 — retryWrap walks the err.cause chain ✅
+`retryWrap` was expanded in all three room routes (`action`, `chat`, `state`) with a `netErrorSignature(err)` helper that walks `err.cause` to depth 4 and regex-tests the concatenated messages — so a network error wrapped inside an `AggregateError`/PostgresError chain is retried exactly like a direct one, while purely logical errors (e.g. constraint violations) are thrown immediately and never masked by a retry. A new unit test `src/tests/unit/retrywrap-cause.test.ts` proves all four behaviors (direct network error retried; wrapped network error retried; logical Postgres error thrown on first attempt; logical AggregateError thrown on first attempt) — 4/4 PASS. Post-merge proof that production is unbroken: live harness on production **25/25 PASS** and full unit suite 90/90 PASS. The local integration-suite failures (34) are the previously known sandbox condition (requires a local server on :13000, and Neon pooler rejects sandbox egress while psql/direct 5432 works) — unrelated to HP-BUG-06; production behavior is proven live.
+
+**Conclusion: all three stop-conditions closed (AUTH-COVERAGE-001, CLEANUP-002, HP-BUG-06). The additions phase is unblocked.**
