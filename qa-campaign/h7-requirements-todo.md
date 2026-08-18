@@ -23,3 +23,9 @@ typecheck نظيف. بقي: اختبار unit + commit + push.
 2. commit + push (اسم موصى: `fix: retryWrap now inspects err.cause chain (HP-BUG-06)`).
 3. جولة harness كاملة ثالثة (اختياري: 25/25 تحققت بالفعل في جولة H7).
 4. تحديث CLAUDE-FEEDBACK-RESPONSE أو وثيقة إغلاق + commit نهائي.
+
+## الجولة الأخيرة (06:00 UTC)
+Unit tests كاملة: 90/90 PASS (4 ملفات) — يشمل اختبار netErrorSignature الجديد 4/4.
+Integration tests (34 فشلًا): الحالة معروفة من قبل — تتطلب خادمًا محليًا على :13000 غير مشغّل في sandbox + pooler Neon يرفض من بيئة sandbox (psql عبر 5432 مباشر يعمل، لكن driver postgres يفشل برسالة فارغة من هنا). هذا نمط موثق سابقًا (ECONNREFUSED pooler من sandbox) وليس نتيجة HP-BUG-06 — retryWrap يعمل في production على Vercel حيث pooler متاح (إثبات: 25/25 harness حي على الإنتاج بعد commit).
+Harness الحي على الإنتاج: 25/25 PASS بعد HP-BUG-06 — الدليل الأهم لأنه يثبت أن توسيع retryWrap لم يكسر شيئًا في الإنتاج.
+Commits: 4d822c5 (phaser) + 7b1fa8c (HP-BUG-06 + H7) على origin/main. GitHub Push Protection رفض commit أولًا لاحتواءه ملفات QA بتوكنات — أعيد تجميع الـcommit بدونها.

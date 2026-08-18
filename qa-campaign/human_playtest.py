@@ -540,9 +540,8 @@ async def main():
             h6_asker = abdo if gs.get("currentPlayerIdx") == 0 else anfal
             h6_answerer = anfal if h6_asker is abdo else abdo
             # (حقن اختباري موثق) — القنابل Nُستنفدت في H1/H2: نعيد تزويد القنابل عبر DB مباشرة
-            import os as _os
-            # url صريح (DATABASE_URL في بيئة التشغيل تشير إلى MySQL خاطئ)
-            _dburl = "postgresql://neondb_owner:npg_HQq30ALYsjvu@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require"
+            # HP-SECURITY-001: لا توكنات في الكود — يُقرأ من متغير البيئة WOF_DATABASE_URL
+            _dburl = os.environ.get('WOF_DATABASE_URL', '')
             try:
                 import psycopg2 as _pg
                 c = _pg.connect(_dburl)
@@ -552,6 +551,8 @@ async def main():
                 abdo.ev("h6", f"refill bombs via DB: room={abdo._room_code}")
             except Exception as _refill_err:
                 abdo.ev("h6", f"refill failed: {str(_refill_err)[:80]}")
+            if not _dburl:
+                abdo.ev("h6", "refill skipped: WOF_DATABASE_URL not set (no secret in code — HP-SECURITY-001)")
             r_b6 = await h6_answerer.action("use_bomb")
             s_b6 = await abdo.state(); gs_b6 = (s_b6 or {}).get("gameState") or {}
             h6_answerer.ev("h6", f"use_bomb status={r_b6.get('status')} err={r_b6.get('error')} gs={json.dumps(gs_b6, ensure_ascii=False)[:180]}")

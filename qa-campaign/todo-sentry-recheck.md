@@ -14,7 +14,7 @@
 ## معلومات مهمة
 - Gmail: rezerosaga@gmail.com (كلمتا المرور رفضهما Google مع Playwright).
 - الغو موصول (GitHub CLI) بصلاحية admin كامل — repo بلا issues.
-- Sentry token (sntryu_...) بلا org:integrations scope.
+- Sentry token (sntryu_[REDACTED]...) بلا org:integrations scope.
 
 ## التحقق النهائي بعد تفعيل المستخدم (05:18 UTC 2026-08-18)
 - المستخدم فعّل من الواجهة: GitHub Integration settings → "Add GitHub Project" → rezerosaga-ai/wheel-of-fate

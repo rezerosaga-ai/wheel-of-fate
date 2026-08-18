@@ -76,7 +76,7 @@
 - التقرير يخرج إلى ~/wheel-of-fate-restored/qa-campaign/human-playtest-report.json
 - ملاحظة محتملة: H2 double-click يعتمد متغير one_answer_ok خارج scope إذا فشل UI fill — يجب مراجعة بعد أول تشغيل.
 - المنهجية المتفق عليها مع المستخدم: اكتشاف أولًا → Repair Lab (H-REPAIR-xxx) → إصلاح فعلي → replay → regression → لا رسائل إلا طوارئ → الختام "اكتملت المرحلة مستعد للإضافات" + أرقام.
-- بعد الاستقرار: نشر/دمج main عبر gh (GH_TOKEN=PAT github_pat_11B4DLJUA02PS0...)، Vercel auto-deploy، ثم التقرير النهائي.
+- بعد الاستقرار: نشر/دمج main عبر gh (GH_TOKEN=PAT github_pat_[REDACTED]...)، Vercel auto-deploy، ثم التقرير النهائي.
 
 ## تشخيص run2 (18:58)
 state API shape مؤكد: {room, gameState:{phase, currentPlayerIdx, roundNumber, bombRedirect, player1Bomb..., loveCounter, currentAnswer, reactionDone, dontLaughActive}, messages, onlineStatus}. phase يبدأ "waiting" حتى يبدأ اللاعب اللعب. سبب فشل phase_guard: game لم تبدأ (phase=waiting) لأن ANFAL انضمت متأخرًا + لا أحد بدأ. الحل في human_playtest: بعد الانضمام انتظر onlineStatus.player2=true ثم advance_to_question (اللف يبدأ من waiting). advance_to_question صحيح (يقبل أي phase ويعمل)، لكن loop 30 دورة ×400ms = 12s كافي. المشكلة: phase_guard كان أول شيء بعد create_and_join مباشرة — room status waiting + لا spin UI قبل بدء اللعبة؟ advance_to_question يستخدم أزرار "🎡 أدر العجلة!" — موجودة في صفحة lobby؟ يجب فحص: هل lobby يعرض زر العجلة قبل اختيار mood؟ UI في GameRoom: lobby قبل start يعرض زر. لكن create_and_join يستحق فحصًا إضافيًا بعد الانضمام (هل ANFAL ترى lobby أم waiting).
@@ -262,11 +262,11 @@ H6_setup_question FAIL: phase=conflict — Conflict Room ظهر تلقائيًا
 - HP-BUG-05 أُصلح (chat() helper يرجع last بدل r) → chat statuses صحيحة الآن.
 - H4_rapid_chat_burst: PASS في run10+ بعد retry مدمج في harness (burst retry 3 محاولات) + retryWrap سابق.
 - H2_double_click: FAIL منذ run5 بسبب أن textarea يظهر فقط للمجيب و🕊️ داخل ChatPanel داخل drawer. الحل في run13: فتح drawer "💬 الدردشة" + fallback double-click عبر API مباشر (ThreadPoolExecutor + requests متزامن — asyncio.run داخل loop حدث يُعلّق). PASS من run13.
-- H6 setup: round بعد H5 يصل phase=conflict (ظهور Conflict Room تلقائيًا = PASS عاطفي!) — advance_next_round يدعم الآن conflict (conflict_step → conflict_agree → conflict_next). لكن H6 fail بسبب: (1) qn=4+ القنابل مستنفدة (H1+H2 استخدموا 2) → refill عبر psycopg2 من DB (الـurl الصحيح من .env.local: neondb_owner:npg_HQq30ALYsjvu@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb). direct OK من sandbox.
-- run14: 16 PASS / 1 FAIL (H6 refill فشل — url خاطئ npg_YDIyMs1P6hiw).
+- H6 setup: round بعد H5 يصل phase=conflict (ظهور Conflict Room تلقائيًا = PASS عاطفي!) — advance_next_round يدعم الآن conflict (conflict_step → conflict_agree → conflict_next). لكن H6 fail بسبب: (1) qn=4+ القنابل مستنفدة (H1+H2 استخدموا 2) → refill عبر psycopg2 من DB (الـurl الصحيح من .env.local: neondb_owner:[REDACTED]@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb). direct OK من sandbox.
+- run14: 16 PASS / 1 FAIL (H6 refill فشل — url خاطئ [REDACTED]).
 - run15: 9 PASS ثم H3_setup_question FAIL (phase=reaction) — توقف مبكر! H2_double_click PASS، لكن بعدها cleanup من H2c (react_barf فقط) ترك phase=reaction ثم advance_next_round لم يحل reaction→round_end→question في الوقت؟ advance_next_round يتعامل مع reaction (انتظار 1.5s) — لكن round بعد reaction ينتقل round_end تلقائيًا؟ في run15: بعد H2c double-click، phase=reaction ثم H2_empty_chat → ثم advance_next_round لH3 لم يعمل (max_steps × 2.5s قصير؟ round بعد reaction يأخذ زمنًا أطول؟). ملاحظة: H2c في run15 استغرق ~29s (20:12:32→20:13:03) ثم empty_chat 20:13:06 → H3 20:14:47 أي 101s انتظر ثم FAIL phase=reaction. advance_next_round loop = 40 دورة × (400ms + waits) ≈ 60-100s — round_end ينتظر UI "🎡 أدر العجلة!" قد يحتاج نقر UI. المشكلة: advance_next_round عند round_end يستخدم UI "🎡 أدر العجلة!" أو next_round — لكن ربما round بعد cleanup في H2c لم يصل round_end أصلًا (لأن react_barf وحده ينقل round_end؟ check: submit_reaction ينقل round_end تلقائيًا). بعد 101s phase=reaction = round عالق!
 - فحص مطلوب: هل round عالق في reaction (currentAnswer موجود لكن reactionDone=false) — حالة deadlock محتملة: لا UI reaction متاح ولا end_round مقبول (G-03: 400 بدون reactionDone). هذا BUG محتمل حقيقي (UX-029 سابق: reaction واحدة تنهي round تلقائيًا في بعض الحالات؟). يجب فحص game-logic: ماذا يحدث إذا reaction واحدة لم تحدث؟ end_round=400 والUI يعرض reaction grid؟
-- DB: neondb_owner:npg_HQq30ALYsjvu@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb (direct OK من sandbox).
+- DB: neondb_owner:[REDACTED]@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb (direct OK من sandbox).
 
 ## BUG-027 (Repair Lab) — round عالق في reaction (UX-032)
 الملاحظة: بعد submit_reaction (ممن اللاعب صاحب الدور) أو حتى بدون reaction، round قد يبقى في phase=reaction إلى الأبد. end_round يرجع status=200 updates={} (silent success) لأنه ينادي next_round الذي يشترط phase ∈ (round_end, fate_card, know_me, dont_laugh) — reaction ليست منها!
@@ -298,7 +298,7 @@ HP-BUG-07: state/route.ts فيها retryWrap (checked) ✓ — تبقى reflect/
 الإصلاحات المنجزة: BUG-027 (end_round يقبل phase=reaction → round_end في game-logic.ts) + HP-BUG-06 (retryWrap في create + join routes) + HP-BUG-07 (retryWrap في reflect route). room XUJJWU أُعيد إلى round_end يدويًا.
 نتائج tests منفردة: unit 86/86، integration 21/21، typecheck OK. test:load متقطع (pool exhaustion تحت حمل متزامن مع harness حي على dev server 4GB).
 الخطوة التالية: تشغيل harness run16 (الغرفة تستأنف من round_end)، ثم test:all مجددًا، checkpoint، GitHub commit+push، توثيق README.
-ملاحظات: harness human_playtest.py في qa-campaign، run14=16/17 PASS (H6 فشل قبل إصلاح refill url). cleanup fallback جديد في H2c يعمل (react_barf + end_round إجباري عند reaction). DB url: neondb_owner:npg_HQq30ALYsjvu@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb. dev server localhost:13000.
+ملاحظات: harness human_playtest.py في qa-campaign، run14=16/17 PASS (H6 فشل قبل إصلاح refill url). cleanup fallback جديد في H2c يعمل (react_barf + end_round إجباري عند reaction). DB url: neondb_owner:[REDACTED]@ep-muddy-water-axvda9ly.c-4.us-east-2.aws.neon.tech/neondb. dev server localhost:13000.
 المستخدم يطلب عدم الإزعاج إلا للضرورة، وتوقيع "تم 😍😍😍😍" عند إتمام كل مرحلة. المطلوب: إخبار المستخدم عند اكتمال اكتشاف الأخطاء وإصلاحاتها والاستعداد للانتقال للمرحلة الثانية (الإضافات).
 
 ## HP-BUG-06 — تشخيص وإصلاح موسّع (2026-08-17 20:50)
