@@ -6,9 +6,25 @@ import { processAction, type GameAction, type GameStateData } from '@/lib/game-l
 import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
 
 /**
- * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED)
- * من Neon pooler تحت الحمل المتزامن — توسيع UX-032 إلى action route.
+ * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED/connection)
+ * من Neon pooler تحت الحمل المتزامن — UX-032 + HP-BUG-06.
+ * HP-BUG-06 (Claude 2026-08-18): نفحص الآن err.cause أيضًا إلى جانب err.message،
+ * لأن pooler يغلف بعض أخطاء الاتصال في AggregateError/PostgresError متداخلة —
+ * الفحص القديم (message فقط) كان يخفي أعطالًا حقيقية تحت الحمل.
  */
+function netErrorSignature(err: unknown): boolean {
+  let chain: unknown = err;
+  // نجمع err.message + كل err.cause حتى عمق 3 (AggregateError/PostgresError wrapped)
+  const seen = new Set<unknown>();
+  const parts: string[] = [];
+  while (chain && !seen.has(chain) && parts.length < 4) {
+    seen.add(chain);
+    parts.push((chain as Error)?.message || '');
+    chain = (chain as Error)?.cause;
+  }
+  const blob = parts.join(' ');
+  return /ECONNRESET|ECONNREFUSED|connection/i.test(blob);
+}
 async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   let lastErr: unknown = null;
   for (let i = 0; i < attempts; i++) {
@@ -16,9 +32,7 @@ async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
       return await fn();
     } catch (err: unknown) {
       lastErr = err;
-      const msg = (err as Error)?.message || '';
-      const isNet = /ECONNRESET|ECONNREFUSED|connection/i.test(msg);
-      if (!isNet || i === attempts - 1) throw err;
+      if (!netErrorSignature(err) || i === attempts - 1) throw err;
       await new Promise((res) => setTimeout(res, 100 * (i === 0 ? 1 : i === 1 ? 2.5 : 5)));
     }
   }

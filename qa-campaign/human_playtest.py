@@ -16,6 +16,9 @@ H4  سلوك بشري غير مثالي: رسائل قصيرة، رسالة فا
     chat خلال أطوار اللعب، reaction خارج التوقيت
 H5  rhythm إنساني كامل: ABDO رومانسي/طويل/مزاح، ANFAL قصيرة/خجولة/reactions كثيرة
 H6  refresh أثناء قنبلة مفعّلة: هل يُحفظ bombRedirect؟
+H7  Google Auth flow على الإنتاج الحي (بدون تسجيل دخول فعلي):
+    الزر بالـDOM، providers oidc، POST signin/google بـCSRF → 302 accounts.google.com
+    PKCE S256 وredirect_uri مطابق.
 
 قواعد:
 - لا retry لإخفاء race. سجل FAIL وتابع.
@@ -28,7 +31,7 @@ sys.path.insert(0, '/home/ubuntu/wheel-of-fate-restored/qa-campaign')
 os.chdir('/home/ubuntu/wheel-of-fate-restored/qa-campaign')
 from playwright.async_api import async_playwright
 
-BASE = 'http://localhost:13000'
+BASE = os.environ.get('WOF_BASE', 'http://localhost:13000')
 EVID = os.path.expanduser('~/wheel-of-fate-restored/qa-campaign/evidence-human')
 os.makedirs(EVID, exist_ok=True)
 
@@ -569,6 +572,83 @@ async def main():
             else:
                 record("H6_bomb_persists_after_refresh", False, "لم تصل لطور bombRedirect للتحقق")
 
+            # ══════════════ H7: Google Auth flow (الإنتاج الحي، بدون تسجيل فعلي) ══════════════
+            try:
+                import urllib.parse as _up
+                h7 = anfal  # متصفح احتياطي — H7 لا يحتاج غرفة
+                sig_js = """async () => {
+  const r = await fetch('/api/auth/providers');
+  const d = await r.json();
+  return {status: r.status, google: d.google || null};
+}"""
+                # الخطوة 1: تحميل /auth/signin والتحقق من الزر
+                try:
+                    await h7.page.goto(BASE + '/auth/signin', wait_until="domcontentloaded", timeout=40000)
+                    await h7.page.wait_for_timeout(2000)
+                    btn_txt = await h7.page.evaluate("async () => { const bs = [...document.querySelectorAll('button')]; const g = bs.find(b => (b.innerText||'').includes('Google')); return g ? g.innerText.trim() : null; }")
+                    h7.ev("h7", f"signin loaded, google button='{btn_txt}'")
+                    record("H7_signin_google_button_in_dom", bool(btn_txt), f"نص الزر: {btn_txt}")
+                except Exception as e1:
+                    h7.ev("h7", f"goto signin FAILED: {str(e1)[:80]}")
+                    record("H7_signin_google_button_in_dom", False, f"فشل تحميل الصفحة: {str(e1)[:80]}")
+                # الخطوة 2: providers endpoint — google مسجل بنوع oidc
+                try:
+                    prov = await h7.page.evaluate(sig_js)
+                    g = (prov or {}).get('google') or {}
+                    h7.ev("h7", f"providers status={prov.get('status')} google.id={g.get('id')} type={g.get('type')}")
+                    record("H7_google_registered_oidc",
+                           prov.get('status') == 200 and g.get('id') == 'google' and g.get('type') == 'oidc',
+                           f"status={prov.get('status')} id={g.get('id')} type={g.get('type')}")
+                except Exception as e2:
+                    h7.ev("h7", f"providers FAILED: {str(e2)[:80]}")
+                    record("H7_google_registered_oidc", False, f"{str(e2)[:80]}")
+                # الخطوة 3: POST /api/auth/signin/google مع CSRF — 302 + الوجهة + PKCE
+                # نستخدم interception للـresponse (redirect: manual يرمي CORS error = status 0 في
+                # بعض البيئات، لذلك نستخرج Location من response headers مباشرة عبر CDP)
+                try:
+                    from playwright.async_api import Route, Response as PWResponse
+                    import urllib.parse as _up2
+                    captured = {}
+                    async def _h7_resp(r: PWResponse):
+                        if 'signin/google' in r.url and r.request.method == 'POST' and r.status in (302, 303):
+                            try: captured['headers'] = r.headers
+                            except Exception: pass
+                    h7.page.on("response", _h7_resp)
+                    csrf_js = "async () => { const r = await fetch('/api/auth/csrf'); const d = await r.json(); return d.csrfToken; }"
+                    token = await h7.page.evaluate(csrf_js)
+                    h7.ev("h7", f"csrf obtained={bool(token)}")
+                    redir = await h7.page.evaluate("async (tok) => { try { const r = await fetch('/api/auth/signin/google', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'csrfToken=' + encodeURIComponent(tok), redirect: 'manual' }); return { status: r.status, location: r.headers.get('location'), ok: true }; } catch(e) { return { status: 0, location: null, ok: false, err: String(e).slice(0,80) }; } }", token or "")
+                    await h7.page.wait_for_timeout(1200)
+                    h7.page.remove_listener("response", _h7_resp)
+                    loc = redir.get('location') or ((captured.get('headers') or {}).get('location') or '')
+                    status = redir.get('status') or (302 if captured.get('headers') else 0)
+                    parsed = dict(_up2.parse_qs(_up2.urlparse(loc).query))
+                    redir_uri = parsed.get('redirect_uri', [''])[0]
+                    ccm = parsed.get('code_challenge_method', [''])[0]
+                    h7.ev("h7", f"POST signin/google: {status} → {loc[:90]} cap={bool(captured.get('headers'))} err={redir.get('err','')[:40]}")
+                    record("H7_post_signin_google_302",
+                           status in (302, 303),
+                           f"status={status} location={loc[:80]}")
+                    record("H7_redirect_to_google_accounts",
+                           loc.startswith('https://accounts.google.com'),
+                           f"starts with accounts.google.com: {bool(loc.startswith('https://accounts.google.com'))}")
+                    record("H7_redirect_uri_exact",
+                           redir_uri == 'https://wheel-of-fate-three.vercel.app/api/auth/callback/google',
+                           f"redirect_uri={redir_uri}")
+                    record("H7_pkce_s256",
+                           ccm == 'S256' and bool(parsed.get('code_challenge')),
+                           f"code_challenge_method={ccm} code_challenge={'موجود' if parsed.get('code_challenge') else 'غائب'}")
+                    record("H7_no_fake_login_attempt", True, "لا محاكاة تسجيل دخول وهمي — الجزء الحي مسؤولية بشرية (بند 3 من رد Claude)")
+                except Exception as e3:
+                    h7.ev("h7", f"POST signin/google FAILED: {str(e3)[:80]}")
+                    record("H7_post_signin_google_302", False, f"{str(e3)[:80]}")
+                    record("H7_redirect_to_google_accounts", False, "لم يصل للخطوة")
+                    record("H7_redirect_uri_exact", False, "لم يصل للخطوة")
+                    record("H7_pkce_s256", False, "لم يصل للخطوة")
+                    record("H7_no_fake_login_attempt", False, "لم يصل للخطوة")
+            except Exception as eH:
+                record("H7_engine_crash", False, f"H7 exception: {str(eH)[:100]}")
+                import traceback; traceback.print_exc()
     except Exception as e:
         import traceback; traceback.print_exc()
         record("engine_crash", False, f"engine exception: {str(e)[:120]}")

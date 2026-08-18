@@ -5,9 +5,22 @@ import { eq } from 'drizzle-orm';
 import { notifyRoomUpdate } from '@/app/api/room/[code]/stream/route';
 
 /**
- * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED)
- * من Neon pooler تحت الحمل المتزامن — توسيع UX-032 إلى chat route.
+ * retryWrap: يعيد محاولة عمليات DB عند أخطاء الشبكة المتقطعة (ECONNRESET/ECONNREFUSED/connection)
+ * من Neon pooler تحت الحمل المتزامن — UX-032 + HP-BUG-06 (يفحص err.cause أيضًا عبر
+ * netErrorSignature، مثل نسخة action route).
  */
+function netErrorSignature(err: unknown): boolean {
+  let chain: unknown = err;
+  const seen = new Set<unknown>();
+  const parts: string[] = [];
+  while (chain && !seen.has(chain) && parts.length < 4) {
+    seen.add(chain);
+    parts.push((chain as Error)?.message || '');
+    chain = (chain as Error)?.cause;
+  }
+  const blob = parts.join(' ');
+  return /ECONNRESET|ECONNREFUSED|connection/i.test(blob);
+}
 async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   let lastErr: unknown = null;
   for (let i = 0; i < attempts; i++) {
@@ -15,9 +28,7 @@ async function retryWrap<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
       return await fn();
     } catch (err: unknown) {
       lastErr = err;
-      const msg = (err as Error)?.message || '';
-      const isNet = /ECONNRESET|ECONNREFUSED|connection/i.test(msg);
-      if (!isNet || i === attempts - 1) throw err;
+      if (!netErrorSignature(err) || i === attempts - 1) throw err;
       await new Promise((res) => setTimeout(res, 100 * (i === 0 ? 1 : i === 1 ? 2.5 : 5)));
     }
   }
