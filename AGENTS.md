@@ -1,121 +1,70 @@
-# Phaser 2D Game Template — AI Development Rules 
+# Wheel of Fate — AI Development Rules
 
-## Core Architecture: Next.js + Isolated SOP (Kit-First)
+## Core Architecture
 
-This template is built on **Next.js (App Router)** and **Phaser 3**. Development must follow these engineering standards to ensure SSR safety and module isolation.
+**Wheel of Fate** is a real-time couple's question game: two players create/join a room code, answer questions, rate answers, chat, reflect, and resolve conflicts together.
 
-> [!CAUTION]
-> **ESM Import Rule**: In the Next.js environment, the `phaser` package has no default export.
-> ❌ `import Phaser from 'phaser';`
-> ✅ `import * as Phaser from 'phaser';`
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Framework | Next.js 16.3.1 (App Router) | Vercel deployment; Turbopack in dev |
+| Language | TypeScript (strict) | `pnpm run typecheck`, `pnpm run verify` (typecheck + lint + production build) |
+| Database | Neon Postgres via Drizzle ORM | `src/db` + `src/db/schema.ts`; use connection DIRECT endpoint in tests, pooler in production |
+| Package manager | pnpm 10+ exclusively | No npm/yarn; keep `pnpm-lock.yaml` in sync |
+| Error monitoring | Sentry | Prod errors auto-create GitHub Issues (Sentry↔GitHub sync both directions active) |
+| QA | Playwright harnesses in `qa-campaign/` | Never modify production to fix a failing test first — diagnose with logs |
+| Hosting | Vercel (autoscale) | Deployments are automatic on `main` commits |
 
----
-
-## Package Management
-
-- Use **pnpm 10.33.4** exclusively for dependency and script commands.
-- Do not use `npm`, `npx`, `yarn`, `package-lock.json`, or `yarn.lock`.
-- Use `pnpm install`, `pnpm add`, `pnpm remove`, `pnpm exec`, and `pnpm run <script>`.
-- Keep `pnpm-lock.yaml` synchronized with `package.json`.
-- Before running project scripts, check whether `node_modules/.bin/next` exists. If it does not, run `pnpm install --frozen-lockfile` first; do not probe missing tools with `npx`.
-- Run `pnpm run typecheck` for TypeScript validation. Never invoke `tsc` through `npx`.
-- Use `pnpm run verify` for the complete typecheck, lint, and production-build validation sequence.
+**Not in use (do not reintroduce):** Phaser, `src/game`, `src/kit`, Cloudflare Workers (`wrangler.toml`), Dockerfile. Removed 2026-08-18 as dead template leftovers.
 
 ---
 
-### Project Structure
+## Repository Structure
 
 ```
 src/
-├── app/                    ← Next.js core (routing, layout, global styles)
-│   ├── layout.tsx          ← Root layout (Metadata, Fonts)
-│   ├── page.tsx            ← Game entry page
-│   └── globals.css         ← Global styles (Rich Aesthetics)
-│
-├── components/             ← React components
-│   └── GameWrapper.tsx     ← SSR-safe game wrapper (dynamic, ssr: false)
-│
-├── game/                   ← Phaser development zone (core logic)
-│   ├── boot.ts             ← Game bootstrapper (config, scene registration)
-│   ├── config.ts           ← Game config constants
-│   ├── scenes/             ← Native scene classes
-│   └── entities/           ← Physics entity classes
-│
-├── store/                  ← Zustand state management (useGameStore.ts)
-├── ui/                     ← React HUD components (must include 'use client')
-└── kit/                    ← Core toolkit (BaseScene, Input, Textures) ✅ Use first
+├── app/                ← Next.js App Router (routes, layouts, API under api/)
+│   └── api/room/[code]/ ← room state / action / chat / reflect / stream routes
+├── components/         ← React UI components
+├── lib/                ← game-logic.ts (authoritative state machine), auth.ts (NextAuth), db
+middleware/             ← Next 16 folder convention (index.ts + matcher.ts)
+qa-campaign/            ← ALL QA harnesses, reports, evidence (source of truth for stability)
+docs/                   ← technical reports
 ```
 
 ---
 
-## Skill System
+## Golden Rules (hard, non-negotiable)
 
-> 🚨 **Mandatory**: Before any Phaser-related development, you must load the `native-phaser-gamedev` SKILL for routing guidance.
-
-This template uses a **Hub + Specialized Skill** layered system:
-
-| Skill | Responsibility | When to Load |
-|-------|---------------|-------------|
-| **`native-phaser-gamedev`** | **Hub Router** — Defines the 6-phase workflow and stage orchestration | Single entry point for any dev task |
-| **`game-template-sop`** | **Template SOP** — Directory structure, Kit API usage, gotchas | When creating a new game or integrating Kit |
-| **`assets-generate`** | **Pixel Asset Engine (Pixel Lab)** — 4/8-direction rotation, animation generation | When producing high-quality pixel assets |
-| **`sprite-pipeline`** | **Sprite Pipeline** — Normalization, preview, sync to repo | When processing and syncing all visual assets |
-| **`game-ui-frontend`** | **Game UI/HUD Design** — DOM overlay, motion effects, React patterns | When designing HUD or menu systems |
-| **`game-playtest`** | **QA Testing** — Workflow, checklists, report standards | Pre-delivery validation |
-| **`game-architecture`** | **Architecture Decisions** — Simulation/render separation, input mapping | When refactoring or designing complex systems |
-| **`phaser-gamedev`** | **Phaser 3 API Reference** — General API guidance | When implementing specific logic details |
+1. **Simulate before fixing (Repair Lab methodology).** Every bug gets hypotheses, a simulated fix, compatibility check, then the real fix. Never edit production code on impulse.
+2. **No silent failures.** Every error path must report explicitly (error banners, API error objects). If a player-visible failure was silent, it is a bug on its own.
+3. **Evidence-based verification.** A fix is not done until the failing harness scenario passes on the LIVE production environment (`https://wheel-of-fate-three.vercel.app`), not a dev server. 18/18 on `human_playtest.py` against production is the closing criterion.
+4. **Strict turn enforcement.** If an action changes whose turn it is (e.g., bomb), the turn MUST transfer on the server and be reflected on both clients. Server-authoritative; the UI never decides.
+5. **Every production-blocking subsystem needs harness coverage.** Auth, DB, realtime, turn logic — each must have at least one automated scenario. Guest-mode coverage alone is insufficient (see `qa-campaign/CLAUDE-FEEDBACK-RESPONSE.md`).
+6. **Do not fix bugs during QA campaigns.** QA reports; Repair Lab fixes. Keep the phases separate.
+7. **No raised timeouts or retries to hide flakiness.** Record the failure with the timeline and DOM evidence.
+8. **Sentry issues become GitHub Issues automatically.** Never create duplicate manual issues for Sentry-detected prod errors.
 
 ---
 
-## 6-Phase Standard Development Workflow
+## Stability Baselines
 
-Regardless of task size, you must identify which phase you are in:
-
-1. **Phase 1: Setup (Project Skeleton)**
-   - Use `game-template-sop`. Output a shell project with `boot.ts` and a blank canvas.
-2. **Phase 2: Blueprint (Architecture Design)**
-   - Use `game-architecture`. Define scenes, entity inventory, input mapping.
-3. **Phase 3: Prototype (Core Gameplay)**
-   - Use `phaser-gamedev`. **Kit-First** implementation of the core loop (placeholders allowed).
-4. **Phase 4: Assets (Asset Production)**
-   - Use `assets-generate` (Pixel Lab) + `sprite-pipeline`. Replace placeholders with high-quality normalized assets.
-5. **Phase 5: Shell (UI & Menus)**
-   - Use `game-ui-frontend`. Build React HUD, title menu, pause screen.
-6. **Phase 6: QA (Testing & Validation)**
-   - Use `game-playtest`. Execute checklist, ensure `pnpm run verify` passes.
+- **Stable production commit (rollback fallback):** `4c5777d3`
+- **Closing criterion for any change:** full `human_playtest.py` re-run against production = 18/18 PASS, plus Sentry quiet under the same load.
+- **Retry resilience:** `retryWrap` (in room routes) walks up to 8 attempts with exponential backoff against Neon pooler transient errors (`ECONNRESET`/`ECONNREFUSED`/`connection`). Known follow-up: it only inspects `err.message`, not `err.cause` (`HP-BUG-06`).
 
 ---
 
-## Visual Quality Baseline
+## Release Discipline
 
-- **No colored blocks**: Raw unfinished placeholder images or crude color blocks are strictly forbidden in final delivery.
-- **Asset-First**: All entities (characters, items, tiles, backgrounds) must be produced and normalized through `assets-generate` or `sprite-pipeline`. **Procedural drawing (ensureTexture) must not be used as the visual representation in production code.**
-- **Quality mindset**: Phase 4 is a mandatory milestone — delivery is forbidden until assets are finalized.
-
----
-
-## Golden Rules
-
-1. **Kit-First Mandate**: 
-   - ✅ Must extend `BaseScene` (from `@/kit/BaseScene`).
-   - ✅ Must use `UnifiedInput` for input handling.
-   - ✅ Must use `useGameStore` for Phaser-React state synchronization.
-2. **Rendering Precision**:
-   - `pixelArt: true`, `antialias: false`, `roundPixels: true`.
-   - HiDPI adaptation: Refer to the DPR/Zoom approach in `game-template-sop`.
-3. **SSR Safety**:
-   - UI components must have `'use client';` at the top.
-   - Game entry must use `next/dynamic` to disable SSR.
-4. **🚀 Moving Platform Pattern**:
-   - Must use **Dynamic** physics bodies with `immovable: true` and `allowGravity: false`.
-   - Must be driven by **`body.setVelocity`**.
+- Feature additions only AFTER repair phase closure (closed 2026-08-18; see `qa-campaign/POST-CLAUDE-FINAL-REPORT.md`).
+- Additions roadmap: `qa-campaign/ADDITIONS-ROADMAP.md` (voice messages, Conflict Room expansion, Challenge, secret letter, external content, APK rebuild).
+- Each addition: Repair Lab first → merge → full harness re-run → Sentry quiet → then next addition.
+- iOS/Safari and k6 load testing remain open verification items; block marketing pushes on them.
 
 ---
 
-## References
+## QA Assets (do not delete)
 
-- **Hub entry**: `native-phaser-gamedev` SKILL
-- **Asset engine**: `assets-generate` SKILL
-- **Asset sync**: `sprite-pipeline` SKILL
-- **Core toolkit**: `src/kit/BaseScene.ts`, `src/kit/input.ts`
-- **Default port**: `http://localhost:13000`
+`qa-campaign/human_playtest.py` (H1–H6 + planned H7 auth), `harness.py`, `button_auditor.py`, `conflict_run.py`, `check_vercel*.py`, evidence screenshots, `BOMB-TOOLS-CONTRACT.md` (root-cause log), `todo.md`, `POST-CLAUDE-FINAL-REPORT.md`.
+
+**Success signals agreed with the owner:** "تم 😍" for a completed stage, "🥳" for a closed campaign.
